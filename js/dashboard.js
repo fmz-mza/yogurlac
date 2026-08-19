@@ -60,7 +60,7 @@ async function loadDashboardData() {
 
     try {
         // Fetch sales data
-        const { data: ventas, error } = await supabase
+        const { data: ventas, error } = await window.supabaseClient
             .from('ventas')
             .select(`
                 *,
