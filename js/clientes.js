@@ -102,3 +102,47 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+// --- LÓGICA DEL MODAL CLIENTE ---
+const modalCli = document.getElementById('modal-cliente');
+const btnNuevoCli = document.getElementById('btn-nuevo-cliente');
+const btnCancelarCli = document.getElementById('btn-cancelar-cli');
+const formCliente = document.getElementById('form-cliente');
+
+if(btnNuevoCli) {
+    btnNuevoCli.addEventListener('click', () => modalCli.classList.remove('hidden'));
+}
+
+if(btnCancelarCli) {
+    btnCancelarCli.addEventListener('click', () => {
+        modalCli.classList.add('hidden');
+        formCliente.reset();
+    });
+}
+
+if(formCliente) {
+    formCliente.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const nuevoCliente = {
+            nombre: document.getElementById('cli-nombre').value,
+            telefono: document.getElementById('cli-telefono').value,
+            direccion: document.getElementById('cli-direccion').value,
+            lista_precio: document.getElementById('cli-lista').value,
+            saldo: 0
+        };
+
+        try {
+            const { error } = await window.supabaseClient.from('clientes').insert([nuevoCliente]);
+            if (error) throw error;
+
+            alert('✅ Cliente agregado correctamente');
+            modalCli.classList.add('hidden');
+            formCliente.reset();
+            loadClientes(); // Recargar tabla
+            
+        } catch (err) {
+            console.error(err);
+            alert(' Error al guardar: ' + err.message);
+        }
+    });
+}
