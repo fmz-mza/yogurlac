@@ -25,37 +25,29 @@ async function loadProductos() {
         tableBody.innerHTML = '';
 
         productos.forEach(producto => {
-            const margen = producto.costo > 0 
-                ? ((producto.precio_venta - producto.costo) / producto.costo * 100).toFixed(1)
-                : 0;
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    ${producto.nombre}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${producto.categoria || 'N/A'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${formatCurrency(producto.costo)}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    ${formatCurrency(producto.precio_venta)}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${getMargenColor(margen)}">
-                        ${margen}%
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <button class="text-blue-600 hover:text-blue-800 mr-3">Editar</button>
-                    <button class="text-red-600 hover:text-red-800">Eliminar</button>
-                </td>
-            `;
-            tableBody.appendChild(row);
-        });
+    const row = document.createElement('tr');
+    row.innerHTML = `
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${producto.nombre}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${producto.categoria || '-'}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(producto.costo)}</td>
+        
+        <!-- NUEVAS CELDAS DE PRECIOS POR LISTA -->
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-700 font-semibold">
+            ${producto.precio_minorista ? formatCurrency(producto.precio_minorista) : '-'}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-700 font-semibold">
+            ${producto.precio_mayorista ? formatCurrency(producto.precio_mayorista) : '-'}
+        </td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-semibold">
+            ${producto.precio_distribuidor ? formatCurrency(producto.precio_distribuidor) : '-'}
+        </td>
+        
+        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+            <button onclick="editarPrecios('${producto.id}')" class="text-blue-600 hover:text-blue-800 mr-3">Editar Precios</button>
+        </td>
+    `;
+    tableBody.appendChild(row);
+});
 
     } catch (error) {
         console.error('Error loading products:', error);
