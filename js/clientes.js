@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadClientes(searchTerm = '', listaPrecio = '') {
     try {
-        let query = supabase.from('clientes').select('*');
+        let query = window.supabaseClient.from('clientes').select('*');
 
         if (searchTerm) {
             query = query.or(`nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%`);
