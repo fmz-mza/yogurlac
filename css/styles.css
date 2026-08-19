@@ -1,0 +1,64 @@
+/* Custom Styles for Lácteos Pro */
+
+* {
+    transition: all 0.2s ease-in-out;
+}
+
+#mobile-menu {
+    transition: max-height 0.3s ease-out;
+}
+
+.bg-white.rounded-lg.shadow {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.bg-white.rounded-lg.shadow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+.loading {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(59, 130, 246, 0.3);
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    table {
+        font-size: 0.875rem;
+    }
+    
+    th, td {
+        padding: 0.5rem;
+    }
+}
+
+@media print {
+    nav, button {
+        display: none;
+    }
+    
+    body {
+        background: white;
+    }
+    
+    .shadow {
+        box-shadow: none !important;
+    }
+}
