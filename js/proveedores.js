@@ -17,7 +17,7 @@ async function loadVentasDiarias() {
     try {
         const today = new Date().toISOString().split('T')[0];
         
-        const { data: ventas, error } = await supabase
+        const { data: ventas, error } = await window.supabaseClient
             .from('ventas_diarias')
             .select(`
                 *,
@@ -92,7 +92,7 @@ async function loadVentasDiarias() {
 
 async function loadCuentaCorriente() {
     try {
-        const { data: movimientos, error } = await supabase
+        const { data: movimientos, error } = await window.supabaseClient
             .from('cuenta_corriente')
             .select('*')
             .order('fecha', { ascending: false })
