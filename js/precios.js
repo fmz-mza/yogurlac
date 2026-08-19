@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadProductos() {
     try {
-        const { data: productos, error } = await supabase
+        const { data: productos, error } = await window.supabaseClient
             .from('productos')
             .select('*')
             .order('nombre');
