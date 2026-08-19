@@ -87,27 +87,66 @@ btnCancelar.addEventListener('click', () => {
 formProducto.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const nuevoProducto = {
-        nombre: document.getElementById('prod-nombre').value,
-        categoria: document.getElementById('prod-categoria').value,
-        costo: parseFloat(document.getElementById('prod-costo').value),
-        precio_venta: parseFloat(document.getElementById('prod-precio').value)
-    };
+    if(btnNuevo) {
+    btnNuevo.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+        // Enfocar el primer campo al abrir
+        setTimeout(() => document.getElementById('prod-nombre')?.focus(), 100);
+    });
+}
 
-    try {
-        const { error } = await window.supabaseClient
-            .from('productos')
-            .insert([nuevoProducto]);
-
-        if (error) throw error;
-
-        alert('✅ Producto agregado correctamente');
+if(btnCancelar) {
+    btnCancelar.addEventListener('click', () => {
         modal.classList.add('hidden');
         formProducto.reset();
-        loadProductos(); // Recargar tabla
+    });
+}
+
+// Cerrar al hacer clic fuera del modal
+if(modal) {
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.classList.add('hidden');
+            formProducto.reset();
+        }
+    });
+}
+
+if(formProducto) {
+    formProducto.addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-    } catch (err) {
-        console.error(err);
-        alert('❌ Error al guardar: ' + err.message);
-    }
-});
+        const btnSubmit = formProducto.querySelector('button[type="submit"]');
+        const originalText = btnSubmit.textContent;
+        btnSubmit.textContent = 'Guardando...';
+        btnSubmit.disabled = true;
+
+        try {
+            const nuevoProducto = {
+                nombre: document.getElementById('prod-nombre').value.trim(),
+                categoria: document.getElementById('prod-categoria').value.trim() || null,
+                costo: parseFloat(document.getElementById('prod-costo').value) || 0,
+                precio_venta: parseFloat(document.getElementById('prod-precio').value) || null,
+                precio_minorista: parseFloat(document.getElementById('prod-p-minorista').value) || null,
+                precio_mayorista: parseFloat(document.getElementById('prod-p-mayorista').value) || null,
+                precio_distribuidor: parseFloat(document.getElementById('prod-p-distribuidor').value) || null
+            };
+
+            const { error } = await window.supabaseClient.from('productos').insert([nuevoProducto]);
+            
+            if (error) throw error;
+
+            // Éxito
+            modal.classList.add('hidden');
+            formProducto.reset();
+            loadProductos(); // Recargar tabla
+            
+        } catch (err) {
+            console.error(err);
+            alert('❌ Error al guardar: ' + err.message);
+        } finally {
+            btnSubmit.textContent = originalText;
+            btnSubmit.disabled = false;
+        }
+    });
+}
