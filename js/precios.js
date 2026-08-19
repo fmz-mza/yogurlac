@@ -74,3 +74,48 @@ function formatCurrency(amount) {
         currency: 'ARS'
     }).format(amount);
 }
+// Lógica del Modal
+const modal = document.getElementById('modal-producto');
+const btnNuevo = document.getElementById('btn-nuevo-producto');
+const btnCancelar = document.getElementById('btn-cancelar');
+const formProducto = document.getElementById('form-producto');
+
+// Abrir modal
+btnNuevo.addEventListener('click', () => {
+    modal.classList.remove('hidden');
+});
+
+// Cerrar modal
+btnCancelar.addEventListener('click', () => {
+    modal.classList.add('hidden');
+    formProducto.reset();
+});
+
+// Guardar producto
+formProducto.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const nuevoProducto = {
+        nombre: document.getElementById('prod-nombre').value,
+        categoria: document.getElementById('prod-categoria').value,
+        costo: parseFloat(document.getElementById('prod-costo').value),
+        precio_venta: parseFloat(document.getElementById('prod-precio').value)
+    };
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('productos')
+            .insert([nuevoProducto]);
+
+        if (error) throw error;
+
+        alert('✅ Producto agregado correctamente');
+        modal.classList.add('hidden');
+        formProducto.reset();
+        loadProductos(); // Recargar tabla
+        
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error al guardar: ' + err.message);
+    }
+});
