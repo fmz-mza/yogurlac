@@ -4,12 +4,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
     const mobileMenu = document.getElementById('mobile-menu');
     
-    mobileMenuBtn.addEventListener('click', () => {
-        mobileMenu.classList.toggle('hidden');
-    });
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
 
     // Load products
     await loadProductos();
+    initModalLogic(); // Inicializar modal después de cargar DOM
 });
 
 async function loadProductos() {
@@ -22,97 +25,78 @@ async function loadProductos() {
         if (error) throw error;
 
         const tableBody = document.getElementById('productos-table');
+        if (!tableBody) return;
+        
         tableBody.innerHTML = '';
 
         productos.forEach(producto => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${producto.nombre}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${producto.categoria || '-'}</td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(producto.costo)}</td>
-        
-        <!-- NUEVAS CELDAS DE PRECIOS POR LISTA -->
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-green-700 font-semibold">
-            ${producto.precio_minorista ? formatCurrency(producto.precio_minorista) : '-'}
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-700 font-semibold">
-            ${producto.precio_mayorista ? formatCurrency(producto.precio_mayorista) : '-'}
-        </td>
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-semibold">
-            ${producto.precio_distribuidor ? formatCurrency(producto.precio_distribuidor) : '-'}
-        </td>
-        
-        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-            <button onclick="editarPrecios('${producto.id}')" class="text-blue-600 hover:text-blue-800 mr-3">Editar Precios</button>
-        </td>
-    `;
-    tableBody.appendChild(row);
-});
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${producto.nombre}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${producto.categoria || '-'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatCurrency(producto.costo)}</td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-700 font-semibold">
+                    ${producto.precio_minorista ? formatCurrency(producto.precio_minorista) : '-'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-700 font-semibold">
+                    ${producto.precio_mayorista ? formatCurrency(producto.precio_mayorista) : '-'}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-purple-700 font-semibold">
+                    ${producto.precio_distribuidor ? formatCurrency(producto.precio_distribuidor) : '-'}
+                </td>
+                
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <button onclick="editarPrecios('${producto.id}')" class="text-blue-600 hover:text-blue-800 mr-3">Editar</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
 
     } catch (error) {
         console.error('Error loading products:', error);
     }
 }
 
-function getMargenColor(margen) {
-    if (margen >= 30) return 'bg-green-100 text-green-800';
-    if (margen >= 15) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-red-100 text-red-800';
-}
-
 function formatCurrency(amount) {
     return new Intl.NumberFormat('es-AR', {
         style: 'currency',
         currency: 'ARS'
-    }).format(amount);
+    }).format(amount || 0);
 }
-// Lógica del Modal
-const modal = document.getElementById('modal-producto');
-const btnNuevo = document.getElementById('btn-nuevo-producto');
-const btnCancelar = document.getElementById('btn-cancelar');
-const formProducto = document.getElementById('form-producto');
 
-// Abrir modal
-btnNuevo.addEventListener('click', () => {
-    modal.classList.remove('hidden');
-});
+// --- LÓGICA DEL MODAL (Separada y limpia) ---
+function initModalLogic() {
+    const modal = document.getElementById('modal-producto');
+    const btnNuevo = document.getElementById('btn-nuevo-producto');
+    const btnCancelar = document.getElementById('btn-cancelar');
+    const formProducto = document.getElementById('form-producto');
 
-// Cerrar modal
-btnCancelar.addEventListener('click', () => {
-    modal.classList.add('hidden');
-    formProducto.reset();
-});
+    if (!modal || !btnNuevo || !formProducto) return;
 
-// Guardar producto
-formProducto.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if(btnNuevo) {
+    // Abrir modal
     btnNuevo.addEventListener('click', () => {
         modal.classList.remove('hidden');
-        // Enfocar el primer campo al abrir
         setTimeout(() => document.getElementById('prod-nombre')?.focus(), 100);
     });
-}
 
-if(btnCancelar) {
-    btnCancelar.addEventListener('click', () => {
-        modal.classList.add('hidden');
-        formProducto.reset();
-    });
-}
+    // Cerrar modal
+    if (btnCancelar) {
+        btnCancelar.addEventListener('click', () => {
+            modal.classList.add('hidden');
+            formProducto.reset();
+        });
+    }
 
-// Cerrar al hacer clic fuera del modal
-if(modal) {
+    // Cerrar al hacer clic fuera
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.classList.add('hidden');
             formProducto.reset();
         }
     });
-}
 
-if(formProducto) {
+    // Guardar producto
     formProducto.addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -136,10 +120,9 @@ if(formProducto) {
             
             if (error) throw error;
 
-            // Éxito
             modal.classList.add('hidden');
             formProducto.reset();
-            loadProductos(); // Recargar tabla
+            loadProductos();
             
         } catch (err) {
             console.error(err);
