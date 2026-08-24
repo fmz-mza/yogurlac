@@ -93,6 +93,12 @@ function renderizarTablaEditable(productos) {
         let htmlCeldas = `
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 min-w-[150px]">${p.nombre}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatCurrency(p.costo)}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-right">
+    <button onclick="eliminarProducto('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" 
+            class="text-red-600 hover:text-red-800 text-xs font-medium px-3 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors min-h-[36px]">
+        ️ Eliminar
+    </button>
+</td>
         `;
 
         celdas.forEach(celda => {
