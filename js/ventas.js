@@ -196,20 +196,24 @@ async function guardarVenta() {
 
         const { error: detalleError } = await window.supabaseClient
             .from('venta_detalles')
-            .insert(detalles);
+            .insert(details);
 
         if (detalleError) throw detalleError;
 
-        // 3. Actualizar saldo del cliente (suma deuda)
-        await window.supabaseClient.rpc('actualizar_saldo_cliente', { 
-            p_cliente_id: clienteActual.id, 
-            p_monto: totalVenta 
-        }).catch(() => {
-            // Fallback si no existe la función RPC: update manual
-             window.supabaseClient.from('clientes')
-                .update({ saldo: window.supabaseClient.from('clientes').select('saldo').eq('id', clienteActual.id).single().then(r => (r.data?.saldo || 0) + totalVenta) })
+        // 3. Actualizar saldo del cliente (Fallback seguro sin RPC)
+        const { data: cliData, error: cliError } = await window.supabaseClient
+            .from('clientes')
+            .select('saldo')
+            .eq('id', clienteActual.id)
+            .single();
+
+        if (!cliError && cliData) {
+            const nuevoSaldo = (cliData.saldo || 0) + totalVenta;
+            await window.supabaseClient
+                .from('clientes')
+                .update({ saldo: nuevoSaldo })
                 .eq('id', clienteActual.id);
-        });
+        }
 
         alert('✅ Venta registrada correctamente');
         window.location.href = 'index.html';
@@ -217,7 +221,7 @@ async function guardarVenta() {
     } catch (err) {
         console.error(err);
         alert('❌ Error al guardar: ' + err.message);
-        btn.textContent = ' Guardar Venta';
+        btn.textContent = '💾 Guardar Venta';
         btn.disabled = false;
     }
 }
