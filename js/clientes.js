@@ -152,3 +152,87 @@ if(formCliente) {
         }
     });
 }
+// --- LÓGICA DE CUENTA CORRIENTE ---
+
+// Función global para abrir el modal (llamada desde el HTML onclick)
+window.abrirModalMovimiento = function(clienteId, clienteNombre) {
+    const modal = document.getElementById('modal-movimiento');
+    document.getElementById('mov-cliente-id').value = clienteId;
+    document.getElementById('mov-cliente-nombre').textContent = `Cliente: ${clienteNombre}`;
+    document.getElementById('form-movimiento').reset();
+    modal.classList.remove('hidden');
+};
+
+window.cerrarModalMovimiento = function() {
+    document.getElementById('modal-movimiento').classList.add('hidden');
+};
+
+// Manejar el envío del formulario
+document.addEventListener('DOMContentLoaded', () => {
+    const formMov = document.getElementById('form-movimiento');
+    if (formMov) {
+        formMov.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btnSubmit = formMov.querySelector('button[type="submit"]');
+            const originalText = btnSubmit.textContent;
+            btnSubmit.textContent = 'Procesando...';
+            btnSubmit.disabled = true;
+
+            try {
+                const clienteId = document.getElementById('mov-cliente-id').value;
+                const tipo = document.getElementById('mov-tipo').value;
+                const monto = parseFloat(document.getElementById('mov-monto').value);
+                const concepto = document.getElementById('mov-concepto').value || (tipo === 'pago' ? 'Pago recibido' : 'Compra a cuenta');
+
+                // 1. Obtener saldo actual
+                const { data: clienteActual, error: fetchError } = await window.supabaseClient
+                    .from('clientes')
+                    .select('saldo')
+                    .eq('id', clienteId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                // 2. Calcular nuevo saldo
+                let nuevoSaldo = clienteActual.saldo || 0;
+                if (tipo === 'compra') {
+                    nuevoSaldo += monto; // Suma deuda
+                } else {
+                    nuevoSaldo -= monto; // Resta deuda (pago)
+                }
+
+                // 3. Actualizar saldo del cliente
+                const { error: updateError } = await window.supabaseClient
+                    .from('clientes')
+                    .update({ saldo: nuevoSaldo })
+                    .eq('id', clienteId);
+
+                if (updateError) throw updateError;
+
+                // 4. (Opcional pero recomendado) Registrar en tabla de movimientos si existe
+                // Si tienes una tabla 'movimientos_clientes', descomenta esto:
+                /*
+                await window.supabaseClient.from('movimientos_clientes').insert([{
+                    cliente_id: clienteId,
+                    tipo: tipo,
+                    monto: monto,
+                    concepto: concepto,
+                    fecha: new Date().toISOString()
+                }]);
+                */
+
+                alert(`✅ ${tipo === 'pago' ? 'Pago registrado' : 'Compra registrada'} correctamente.\nNuevo saldo: ${formatCurrency(nuevoSaldo)}`);
+                cerrarModalMovimiento();
+                loadClientes(); // Recargar tabla para ver saldo actualizado
+
+            } catch (err) {
+                console.error(err);
+                alert('❌ Error: ' + err.message);
+            } finally {
+                btnSubmit.textContent = originalText;
+                btnSubmit.disabled = false;
+            }
+        });
+    }
+});
