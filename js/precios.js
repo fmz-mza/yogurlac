@@ -247,5 +247,27 @@ function initModalLogic() {
                 btnSubmit.disabled = false;
             }
         });
+        // Función global para eliminar producto
+window.eliminarProducto = async function(id, nombre) {
+    if (!confirm(`¿Estás seguro de eliminar "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('productos')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+
+        // Eliminar del cache local y re-renderizar
+        productosCache = productosCache.filter(p => p.id !== id);
+        renderizarTablaEditable(productosCache);
+        
+        alert('✅ Producto eliminado correctamente');
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error al eliminar: ' + err.message);
+    }
+};
     }
 }
