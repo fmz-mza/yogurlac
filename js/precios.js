@@ -15,20 +15,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     initModalLogic();
 });
 
+// Cargar SOLO productos activos
 async function cargarProductos() {
     try {
         const { data, error } = await window.supabaseClient
             .from('productos')
             .select('*')
+            .eq('activo', true)
             .order('nombre');
         
         if (error) throw error;
         productosCache = data || [];
         
-        // Extraer categorías únicas para filtro
         categoriasUnicas = new Set(productosCache.map(p => p.categoria).filter(Boolean));
         actualizarSelectCategorias();
-        
         renderizarTablaEditable(productosCache);
     } catch (err) {
         console.error('Error cargando productos:', err);
@@ -75,7 +75,7 @@ function renderizarTablaEditable(productos) {
     tbody.innerHTML = '';
     
     if (productos.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No se encontraron productos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">No se encontraron productos activos</td></tr>';
         return;
     }
 
@@ -83,8 +83,7 @@ function renderizarTablaEditable(productos) {
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-gray-50 transition-colors';
         
-        // Celdas editables con margen visual
-        const celdas = [
+        const celdasPrecios = [
             { nombre: 'precio_minorista', label: 'Minorista', color: 'green' },
             { nombre: 'precio_mayorista', label: 'Mayorista', color: 'blue' },
             { nombre: 'precio_distribuidor', label: 'Distribuidor', color: 'purple' }
@@ -93,15 +92,9 @@ function renderizarTablaEditable(productos) {
         let htmlCeldas = `
             <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 min-w-[150px]">${p.nombre}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatCurrency(p.costo)}</td>
-            <td class="px-4 py-3 whitespace-nowrap text-right">
-    <button onclick="eliminarProducto('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" 
-            class="text-red-600 hover:text-red-800 text-xs font-medium px-3 py-1 rounded border border-red-200 hover:bg-red-50 transition-colors min-h-[36px]">
-        ️ Eliminar
-    </button>
-</td>
         `;
 
-        celdas.forEach(celda => {
+        celdasPrecios.forEach(celda => {
             const precio = p[celda.nombre];
             const margen = calcularMargen(p.costo, precio);
             const badge = margen ? `<span class="block text-[10px] mt-1 ${margen.clase}">↗ ${margen.valor}%</span>` : '';
@@ -125,27 +118,42 @@ function renderizarTablaEditable(productos) {
             `;
         });
 
+        // Columna de Acciones (Activar/Desactivar + Eliminar)
+        htmlCeldas += `
+            <td class="px-4 py-3 whitespace-nowrap text-right">
+                <div class="flex gap-2 justify-end">
+                    <button onclick="toggleProductoActivo('${p.id}', '${p.nombre.replace(/'/g, "\\'")}', true)" 
+                            class="text-xs font-medium px-3 py-1 rounded border border-yellow-300 text-yellow-700 hover:bg-yellow-50 transition-colors min-h-[36px]">
+                        ⏸ Desactivar
+                    </button>
+                    <button onclick="eliminarProductoDefinitivo('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" 
+                            class="text-xs font-medium px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors min-h-[36px]"
+                            title="Eliminación permanente">
+                        🗑️
+                    </button>
+                </div>
+            </td>
+        `;
+
         tr.innerHTML = htmlCeldas;
         tbody.appendChild(tr);
     });
 }
 
-// Función global para guardar al perder foco o presionar Enter
+// Guardar precio al perder foco o Enter
 window.guardarPrecioInline = async function(input) {
     const id = input.dataset.id;
     const campo = input.dataset.campo;
     const valor = parseFloat(input.value);
     
-    // Validación básica
     if (isNaN(valor) || valor < 0) {
         input.classList.add('border-red-500', 'ring-2', 'ring-red-200');
         setTimeout(() => input.classList.remove('border-red-500', 'ring-2', 'ring-red-200'), 1500);
         return;
     }
 
-    // Feedback visual de guardado
     const originalBg = input.style.backgroundColor;
-    input.style.backgroundColor = '#dcfce7'; // Verde claro
+    input.style.backgroundColor = '#dcfce7';
     
     try {
         const { error } = await window.supabaseClient
@@ -155,23 +163,81 @@ window.guardarPrecioInline = async function(input) {
             
         if (error) throw error;
         
-        // Actualizar cache local
         const prod = productosCache.find(p => p.id === id);
         if (prod) {
             prod[campo] = valor;
-            // Re-renderizar solo esta fila para actualizar márgenes
-            renderizarTablaEditable(document.getElementById('filtro-producto')?.value ? 
-                productosCache.filter(p => p.nombre.toLowerCase().includes(document.getElementById('filtro-producto').value.toLowerCase())) : 
-                productosCache
-            );
+            // Re-renderizar para actualizar badges de margen
+            const filtroTexto = document.getElementById('filtro-producto')?.value.toLowerCase() || '';
+            const filtroCat = document.getElementById('filtro-categoria')?.value || '';
+            const filtrados = productosCache.filter(p => {
+                const coincideTexto = p.nombre.toLowerCase().includes(filtroTexto);
+                const coincideCat = !filtroCat || p.categoria === filtroCat;
+                return coincideTexto && coincideCat;
+            });
+            renderizarTablaEditable(filtrados);
         }
         
     } catch (err) {
         console.error('Error guardando precio:', err);
-        input.style.backgroundColor = '#fee2e2'; // Rojo claro si falla
+        input.style.backgroundColor = '#fee2e2';
         alert('Error al guardar: ' + err.message);
     } finally {
         setTimeout(() => { input.style.backgroundColor = originalBg; }, 800);
+    }
+};
+
+// Activar / Desactivar producto
+window.toggleProductoActivo = async function(id, nombre, estadoActual) {
+    const nuevoEstado = !estadoActual;
+    
+    if (!nuevoEstado && !confirm(`¿Desactivar "${nombre}"?\nNo aparecerá en nuevas ventas ni en esta lista.`)) return;
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('productos')
+            .update({ activo: nuevoEstado })
+            .eq('id', id);
+
+        if (error) throw error;
+
+        if (nuevoEstado) {
+            await cargarProductos(); // Recargar desde DB
+        } else {
+            productosCache = productosCache.filter(p => p.id !== id);
+            renderizarTablaEditable(productosCache);
+        }
+        
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error: ' + err.message);
+    }
+};
+
+// Eliminación definitiva (con manejo de FK)
+window.eliminarProductoDefinitivo = async function(id, nombre) {
+    if (!confirm(`⚠️ ELIMINACIÓN PERMANENTE\n¿Borrar "${nombre}" para siempre?\nEsto no se puede deshacer.`)) return;
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('productos')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            if (error.code === '23503') {
+                alert(' No se puede eliminar porque tiene historial de ventas.\nUsa "Desactivar" en su lugar.');
+                return;
+            }
+            throw error;
+        }
+
+        productosCache = productosCache.filter(p => p.id !== id);
+        renderizarTablaEditable(productosCache);
+        alert('✅ Producto eliminado permanentemente');
+        
+    } catch (err) {
+        console.error(err);
+        alert(' Error: ' + err.message);
     }
 };
 
@@ -188,7 +254,7 @@ function formatCurrency(amount) {
     return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
 }
 
-// --- LÓGICA DEL MODAL (Mantener funcionalidad de agregar producto) ---
+// --- LÓGICA DEL MODAL DE CREACIÓN ---
 function initModalLogic() {
     const modal = document.getElementById('modal-producto');
     const btnNuevo = document.getElementById('btn-nuevo-producto');
@@ -235,7 +301,8 @@ function initModalLogic() {
                     precio_venta: parseFloat(document.getElementById('prod-precio').value) || null,
                     precio_minorista: parseFloat(document.getElementById('prod-p-minorista').value) || null,
                     precio_mayorista: parseFloat(document.getElementById('prod-p-mayorista').value) || null,
-                    precio_distribuidor: parseFloat(document.getElementById('prod-p-distribuidor').value) || null
+                    precio_distribuidor: parseFloat(document.getElementById('prod-p-distribuidor').value) || null,
+                    activo: true // Nuevo producto siempre activo
                 };
 
                 const { error } = await window.supabaseClient.from('productos').insert([nuevoProducto]);
@@ -243,7 +310,7 @@ function initModalLogic() {
 
                 modal.classList.add('hidden');
                 formProducto.reset();
-                await cargarProductos(); // Recargar toda la tabla
+                await cargarProductos();
                 
             } catch (err) {
                 console.error(err);
@@ -253,27 +320,5 @@ function initModalLogic() {
                 btnSubmit.disabled = false;
             }
         });
-        // Función global para eliminar producto
-window.eliminarProducto = async function(id, nombre) {
-    if (!confirm(`¿Estás seguro de eliminar "${nombre}"?\nEsta acción no se puede deshacer.`)) return;
-
-    try {
-        const { error } = await window.supabaseClient
-            .from('productos')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-
-        // Eliminar del cache local y re-renderizar
-        productosCache = productosCache.filter(p => p.id !== id);
-        renderizarTablaEditable(productosCache);
-        
-        alert('✅ Producto eliminado correctamente');
-    } catch (err) {
-        console.error(err);
-        alert('❌ Error al eliminar: ' + err.message);
-    }
-};
     }
 }
