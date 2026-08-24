@@ -59,13 +59,20 @@ async function loadDashboardData() {
     const dateTo = document.getElementById('date-to').value;
 
     try {
-        // Fetch sales data
+        // Consulta CORRECTA: Ventas -> Detalles -> Productos
         const { data: ventas, error } = await window.supabaseClient
             .from('ventas')
             .select(`
-                *,
-                clientes(nombre),
-                productos(nombre, costo, precio_venta)
+                id, 
+                fecha, 
+                total, 
+                cliente_id,
+                clientes ( nombre ),
+                venta_detalles (
+                    cantidad,
+                    precio_unitario,
+                    productos ( nombre, costo )
+                )
             `)
             .gte('fecha', dateFrom)
             .lte('fecha', dateTo)
@@ -74,61 +81,67 @@ async function loadDashboardData() {
 
         if (error) throw error;
 
-        // Calculate statistics
         let totalVentas = 0;
         let totalCosto = 0;
         let uniqueClientes = new Set();
         let totalProductos = 0;
+        const filasTabla = [];
 
-        ventas.forEach(venta => {
-            totalVentas += venta.total;
-            totalCosto += (venta.productos?.costo || 0) * venta.cantidad;
-            uniqueClientes.add(venta.cliente_id);
-            totalProductos += venta.cantidad;
+        ventas.forEach(v => {
+            totalVentas += v.total || 0;
+            if (v.cliente_id) uniqueClientes.add(v.cliente_id);
+
+            // Procesar detalles anidados
+            if (v.venta_detalles) {
+                v.venta_detalles.forEach(d => {
+                    const cant = d.cantidad || 0;
+                    const costoUnit = d.productos?.costo || 0;
+                    
+                    totalCosto += costoUnit * cant;
+                    totalProductos += cant;
+
+                    filasTabla.push({
+                        fecha: v.fecha,
+                        cliente: v.clientes?.nombre || 'N/A',
+                        producto: d.productos?.nombre || 'N/A',
+                        cantidad: cant,
+                        total: v.total
+                    });
+                });
+            }
         });
 
-        const margenGanancia = totalVentas > 0 
-            ? ((totalVentas - totalCosto) / totalVentas * 100).toFixed(1)
+        const margen = totalVentas > 0 
+            ? ((totalVentas - totalCosto) / totalVentas * 100).toFixed(1) 
             : 0;
 
-        // Update stats cards
+        // Actualizar Tarjetas
         document.getElementById('total-ventas').textContent = formatCurrency(totalVentas);
-        document.getElementById('margen-ganancia').textContent = `${margenGanancia}%`;
+        document.getElementById('margen-ganancia').textContent = `${margen}%`;
         document.getElementById('clientes-activos').textContent = uniqueClientes.size;
         document.getElementById('productos-vendidos').textContent = totalProductos;
 
-        // Update table
-        const tableBody = document.getElementById('ventas-table');
-        tableBody.innerHTML = '';
-
-        ventas.slice(0, 10).forEach(venta => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${formatDate(venta.fecha)}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${venta.clientes?.nombre || 'N/A'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${venta.productos?.nombre || 'N/A'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${venta.cantidad}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    ${formatCurrency(venta.total)}
-                </td>
+        // Renderizar Tabla
+        const tbody = document.getElementById('ventas-table');
+        tbody.innerHTML = '';
+        
+        filasTabla.slice(0, 10).forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-6 py-4 text-sm">${formatDate(f.fecha)}</td>
+                <td class="px-6 py-4 text-sm">${f.cliente}</td>
+                <td class="px-6 py-4 text-sm">${f.producto}</td>
+                <td class="px-6 py-4 text-sm">${f.cantidad}</td>
+                <td class="px-6 py-4 text-sm font-bold">${formatCurrency(f.total)}</td>
             `;
-            tableBody.appendChild(row);
+            tbody.appendChild(tr);
         });
 
-    } catch (error) {
-        console.error('Error loading dashboard data:', error);
-        alert('Error al cargar los datos. Verifica la conexión con Supabase.');
+    } catch (err) {
+        console.error('Error Dashboard:', err);
+        alert('Error al cargar dashboard: ' + err.message);
     }
 }
-
 function formatCurrency(amount) {
     return new Intl.NumberFormat('es-AR', {
         style: 'currency',
