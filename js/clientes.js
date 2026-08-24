@@ -63,7 +63,13 @@ async function loadClientes(searchTerm = '', listaPrecio = '') {
                     ${formatCurrency(cliente.saldo || 0)}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <button class="text-blue-600 hover:text-blue-800 mr-3">Editar</button>
+                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+    <button onclick="abrirModalMovimiento('${cliente.id}', '${cliente.nombre}')" 
+            class="text-green-600 hover:text-green-800 mr-3 font-medium flex items-center gap-1 inline-flex">
+        💳 Movimiento
+    </button>
+    <button class="text-blue-600 hover:text-blue-800 mr-3">Editar</button>
+</td>
                     <button class="text-red-600 hover:text-red-800">Eliminar</button>
                 </td>
             `;
