@@ -1,10 +1,11 @@
--- Esquema de YogurLac (snapshot de la base real de Supabase, proyecto kqwnqhayodtjhdksdmfr).
--- Actualizado el 2026-09-23 leyendo la base directamente.
--- Es una foto del estado actual, NO un script incremental: para crear una base nueva
--- ejecutarlo completo; para cambiar la base existente usar migraciones.
+-- Esquema completo de YogurLac. Ejecutarlo entero en el SQL editor de un proyecto Supabase NUEVO
+-- (base vacía). Refleja el proyecto original (kqwnqhayodtjhdksdmfr) sin la función
+-- actualizar_saldo_cliente, que no se usa y era un riesgo. Para cambiar una base ya creada
+-- usar migraciones en supabase/migrations/.
 --
 -- Acceso: solo los dueños (tabla duenos + es_dueno()) vía RLS. Los usuarios se crean en
--- Supabase Auth con el registro público desactivado. Ver supabase/migrations/.
+-- Supabase Auth con el registro público desactivado. Después de crear los usuarios, cargarlos:
+--   insert into public.duenos (user_id) select id from auth.users where email in (...);
 
 -- Tabla: Clientes
 CREATE TABLE clientes (
@@ -98,16 +99,6 @@ $$;
 
 CREATE TRIGGER set_updated_at_ventas BEFORE UPDATE ON ventas
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Sin uso en el código hoy (el saldo se actualiza desde el navegador). Ejecución revocada
--- para anon/authenticated; solo la puede llamar el service role.
-CREATE OR REPLACE FUNCTION actualizar_saldo_cliente(p_cliente_id uuid, p_monto numeric)
-RETURNS void LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-    UPDATE clientes SET saldo = saldo + p_monto WHERE id = p_cliente_id;
-END;
-$$;
-REVOKE EXECUTE ON FUNCTION actualizar_saldo_cliente(uuid, numeric) FROM PUBLIC, anon, authenticated;
 
 -- Índices
 CREATE INDEX idx_ventas_fecha ON ventas(fecha DESC);
