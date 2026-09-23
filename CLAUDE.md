@@ -34,3 +34,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 ## Autenticación y RLS
 
 La app la usan solo 2 dueños. Login con Supabase Auth (email + contraseña, registro público desactivado en el panel). `js/auth.js` se carga en todas las páginas, las oculta hasta verificar sesión y redirige a `login.html`; toda página nueva debe incluir `<style id="auth-oculto">body{visibility:hidden}</style>` en el `<head>` y `js/auth.js` justo después de `js/supabase.js`. Eso solo protege la interfaz: los datos los protege RLS, con la política `"Solo duenos"` (`es_dueno()`, que consulta la tabla `duenos`) en todas las tablas. Un usuario nuevo de Auth no ve nada hasta agregarlo a `duenos`. Los cambios de base van como migraciones en `supabase/migrations/` (nombradas con la versión que asigna Supabase al aplicarlas).
+
+## Supabase MCP (herramientas para Claude)
+
+`.mcp.json` define el servidor `supabase-yogurlac`, limitado al proyecto `jklsoynymbpwvlaqwzhy` con `project_ref` en la URL y autenticado con un token personal (PAT) de la cuenta de Supabase de YogurLac. El token vive en la variable de entorno de Windows `YOGURLAC_SUPABASE_PAT` (nunca en el repo ni en el chat); si falta, hay que regenerarlo en Supabase → Account → Access Tokens. Las herramientas son `mcp__supabase-yogurlac__*` y no llevan `project_id`. Existe además un conector de Claude ligado a *otra* cuenta de Supabase (otros proyectos): no usarlo para YogurLac y confirmar siempre el proyecto antes de aplicar cambios. Tras cambiar el token o el `.mcp.json` hay que reiniciar la app.

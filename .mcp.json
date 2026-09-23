@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "supabase-yogurlac": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=jklsoynymbpwvlaqwzhy",
+      "headers": {
+        "Authorization": "Bearer ${YOGURLAC_SUPABASE_PAT}"
+      }
+    }
+  }
+}
