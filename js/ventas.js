@@ -22,7 +22,7 @@ async function cargarClientes() {
 }
 
 async function cargarProductosBase() {
-    const { data } = await window.supabaseClient.from('productos').select('*').order('nombre');
+    const { data } = await window.supabaseClient.from('productos').select('*').eq('activo', true).order('nombre');
     productosCache = data || [];
 }
 
@@ -196,7 +196,7 @@ async function guardarVenta() {
 
         const { error: detalleError } = await window.supabaseClient
             .from('venta_detalles')
-            .insert(details);
+            .insert(detalles);
 
         if (detalleError) throw detalleError;
 
