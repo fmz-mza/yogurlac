@@ -298,7 +298,7 @@ function initModalLogic() {
                     nombre: document.getElementById('prod-nombre').value.trim(),
                     categoria: document.getElementById('prod-categoria').value.trim() || null,
                     costo: parseFloat(document.getElementById('prod-costo').value) || 0,
-                    precio_venta: parseFloat(document.getElementById('prod-precio').value) || null,
+                    precio_venta: parseFloat(document.getElementById('prod-precio').value) || 0, // NOT NULL en la base
                     precio_minorista: parseFloat(document.getElementById('prod-p-minorista').value) || null,
                     precio_mayorista: parseFloat(document.getElementById('prod-p-mayorista').value) || null,
                     precio_distribuidor: parseFloat(document.getElementById('prod-p-distribuidor').value) || null,

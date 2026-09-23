@@ -25,6 +25,8 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 - Los clientes tienen `lista_precio` (`minorista` | `mayorista` | `distribuidor`); los productos tienen `precio_minorista` / `precio_mayorista` / `precio_distribuidor`, con `precio_venta` como respaldo. `ventas.js` elige el precio según la lista del cliente; `precios.js` los edita en línea (guarda al perder foco o con Enter).
 - El `saldo` del cliente se actualiza con lectura y luego escritura desde el navegador (en `ventas.js` al vender, en `clientes.js` con pagos); no es atómico.
 
-## Desfasaje del esquema (importante)
+## Esquema y seguridad (estado actual)
 
-El código usa columnas y tablas que **`supabase-schema.sql` no define**, así que la base real fue modificada más allá del archivo: `productos.activo`, `productos.precio_minorista/mayorista/distribuidor`, `ventas.estado` y una tabla `venta_detalles` (`venta_id`, `producto_id`, `cantidad`, `precio_unitario`). La tabla `ventas` del archivo (con `producto_id`/`cantidad` por fila) es anterior a la separación cabecera/detalle. Tomar la base real de Supabase como fuente de verdad y actualizar el archivo de esquema cuando se cambien tablas.
+`supabase-schema.sql` es una foto de la base real (proyecto Supabase `kqwnqhayodtjhdksdmfr`, leída el 2026-09-23), no un script incremental. Si se cambian tablas en Supabase, actualizar ese archivo. La base real es la fuente de verdad.
+
+Pendientes de seguridad antes de producción: `ventas` y `venta_detalles` no tienen RLS; el resto tiene políticas `USING (true)`; y `actualizar_saldo_cliente` (SECURITY DEFINER, sin uso en el código) la puede ejecutar el rol `anon`. `productos.precio_venta` es NOT NULL (el formulario de precios lo exige).
