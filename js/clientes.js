@@ -157,18 +157,16 @@ function initClientModals() {
                 const clienteId = document.getElementById('mov-cliente-id').value;
                 const tipo = document.getElementById('mov-tipo').value;
                 const monto = parseFloat(document.getElementById('mov-monto').value);
-                
-                const { data: cli, error: fetchErr } = await window.supabaseClient
-                    .from('clientes').select('saldo').eq('id', clienteId).single();
-                if (fetchErr) throw fetchErr;
+                const concepto = document.getElementById('mov-concepto').value;
 
-                const nuevoSaldo = tipo === 'compra' 
-                    ? (cli.saldo || 0) + monto 
-                    : (cli.saldo || 0) - monto;
-
-                const { error: updateErr } = await window.supabaseClient
-                    .from('clientes').update({ saldo: nuevoSaldo }).eq('id', clienteId);
-                if (updateErr) throw updateErr;
+                // Una sola llamada: el servidor actualiza el saldo y guarda el movimiento en el historial
+                const { data: nuevoSaldo, error } = await window.supabaseClient.rpc('registrar_movimiento_cliente', {
+                    p_cliente_id: clienteId,
+                    p_tipo: tipo,
+                    p_monto: monto,
+                    p_concepto: concepto
+                });
+                if (error) throw error;
 
                 alert(`✅ Movimiento registrado. Nuevo saldo: ${formatCurrency(nuevoSaldo)}`);
                 document.getElementById('modal-movimiento').classList.add('hidden');
@@ -209,4 +207,8 @@ window.abrirModalMovimiento = function(id, nombre) {
     document.getElementById('mov-cliente-nombre').textContent = `Cliente: ${nombre}`;
     document.getElementById('form-movimiento').reset();
     modal.classList.remove('hidden');
+};
+
+window.cerrarModalMovimiento = function() {
+    document.getElementById('modal-movimiento').classList.add('hidden');
 };

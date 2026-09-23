@@ -145,8 +145,61 @@ CREATE POLICY "Solo duenos" ON venta_detalles FOR ALL TO authenticated USING (es
 CREATE POLICY "Solo duenos" ON ventas_diarias FOR ALL TO authenticated USING (es_dueno()) WITH CHECK (es_dueno());
 CREATE POLICY "Solo duenos" ON cuenta_corriente FOR ALL TO authenticated USING (es_dueno()) WITH CHECK (es_dueno());
 
--- Registra una venta completa: cabecera + detalles + saldo en una transacción (ver migración registrar_venta_rpc).
--- Los precios los calcula el servidor según la lista del cliente; no se confía en los del navegador.
+-- Ventas y movimientos de cuenta corriente (ver migraciones registrar_venta_rpc y movimientos_cliente).
+-- Historial de la cuenta corriente de cada cliente (ventas, compras a cuenta y pagos).
+create table public.movimientos_cliente (
+    id uuid primary key default gen_random_uuid(),
+    cliente_id uuid not null references public.clientes(id),
+    fecha date not null default (now() at time zone 'America/Argentina/Mendoza')::date,
+    tipo varchar(20) not null check (tipo in ('venta', 'compra', 'pago')),
+    monto numeric(10,2) not null check (monto > 0),   -- siempre positivo; el tipo define si suma (venta/compra) o resta (pago)
+    concepto text,
+    venta_id uuid references public.ventas(id) on delete set null,
+    created_at timestamptz default now()
+);
+create index idx_movimientos_cliente on public.movimientos_cliente(cliente_id, fecha desc);
+
+alter table public.movimientos_cliente enable row level security;
+create policy "Solo duenos" on public.movimientos_cliente
+    for all to authenticated using (public.es_dueno()) with check (public.es_dueno());
+
+-- Registra una compra a cuenta (suma deuda) o un pago (resta deuda): movimiento + saldo en una transacción.
+-- Devuelve el saldo nuevo. SECURITY INVOKER: RLS (solo dueños) sigue aplicando.
+create or replace function public.registrar_movimiento_cliente(
+    p_cliente_id uuid, p_tipo text, p_monto numeric, p_concepto text default null)
+returns numeric
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+declare
+    v_saldo numeric;
+begin
+    if p_tipo not in ('compra', 'pago') then
+        raise exception 'Tipo de movimiento inválido';
+    end if;
+    if p_monto is null or p_monto <= 0 then
+        raise exception 'El monto debe ser mayor a 0';
+    end if;
+
+    update public.clientes
+    set saldo = coalesce(saldo, 0) + case p_tipo when 'compra' then p_monto else -p_monto end
+    where id = p_cliente_id
+    returning saldo into v_saldo;
+    if not found then
+        raise exception 'Cliente no encontrado';
+    end if;
+
+    insert into public.movimientos_cliente (cliente_id, tipo, monto, concepto)
+    values (p_cliente_id, p_tipo, p_monto, nullif(trim(p_concepto), ''));
+
+    return v_saldo;
+end;
+$$;
+revoke execute on function public.registrar_movimiento_cliente(uuid, text, numeric, text) from public, anon;
+grant execute on function public.registrar_movimiento_cliente(uuid, text, numeric, text) to authenticated;
+
+-- registrar_venta ahora también deja su movimiento en el historial
 create or replace function public.registrar_venta(p_cliente_id uuid, p_items jsonb)
 returns uuid
 language plpgsql
@@ -168,7 +221,6 @@ begin
         raise exception 'Cliente no encontrado';
     end if;
 
-    -- Todos los productos deben existir, estar activos y tener cantidad > 0
     if exists (
         select 1
         from jsonb_to_recordset(p_items) as i(producto_id uuid, cantidad int)
@@ -198,10 +250,9 @@ begin
 
     update public.ventas set total = v_total where id = v_venta_id;
     update public.clientes set saldo = coalesce(saldo, 0) + v_total where id = p_cliente_id;
+    insert into public.movimientos_cliente (cliente_id, tipo, monto, concepto, venta_id)
+    values (p_cliente_id, 'venta', v_total, 'Venta', v_venta_id);
 
     return v_venta_id;
 end;
 $$;
-
-revoke execute on function public.registrar_venta(uuid, jsonb) from public, anon;
-grant execute on function public.registrar_venta(uuid, jsonb) to authenticated;
