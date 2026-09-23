@@ -21,8 +21,15 @@
         if (evento === 'SIGNED_OUT' && !esLogin) location.replace('login.html');
     });
 
-    if (session) agregarSalir(session.user.email);
+    // Mostrar primero: un fallo al armar la navbar no debe dejar la página en blanco
     mostrarPagina();
+    if (session) {
+        try {
+            agregarSalir(session.user.email);
+        } catch (err) {
+            console.error('No se pudo agregar el botón Salir:', err);
+        }
+    }
 })();
 
 // Agrega email + botón "Salir" a la navbar (escritorio y móvil) sin tocar el HTML de cada página
@@ -32,7 +39,7 @@ function agregarSalir(email) {
         location.replace('login.html');
     };
 
-    const escritorio = document.querySelector('nav .hidden.md\:flex');
+    const escritorio = document.querySelector('nav div.hidden[class~="md:flex"]');
     if (escritorio) {
         const span = document.createElement('span');
         span.className = 'text-sm text-gray-500 self-center';
