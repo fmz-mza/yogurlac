@@ -170,50 +170,19 @@ async function guardarVenta() {
     btn.disabled = true;
 
     try {
-        const totalVenta = carrito.reduce((sum, item) => sum + item.subtotal, 0);
-
-        // 1. Crear registro de venta
-        const { data: ventaData, error: ventaError } = await window.supabaseClient
-            .from('ventas')
-            .insert([{
-                cliente_id: clienteActual.id,
-                total: totalVenta,
-                estado: 'pendiente',
-                fecha: new Date().toISOString().split('T')[0]
-            }])
-            .select()
-            .single();
-
-        if (ventaError) throw ventaError;
-
-        // 2. Insertar detalles
-        const detalles = carrito.map(item => ({
-            venta_id: ventaData.id,
+        // Una sola llamada: el servidor crea la venta, sus detalles y actualiza el saldo
+        // en una transacción y calcula los precios según la lista del cliente.
+        const items = carrito.map(item => ({
             producto_id: item.producto_id,
-            cantidad: item.cantidad,
-            precio_unitario: item.precio_unitario
+            cantidad: item.cantidad
         }));
 
-        const { error: detalleError } = await window.supabaseClient
-            .from('venta_detalles')
-            .insert(detalles);
+        const { error } = await window.supabaseClient.rpc('registrar_venta', {
+            p_cliente_id: clienteActual.id,
+            p_items: items
+        });
 
-        if (detalleError) throw detalleError;
-
-        // 3. Actualizar saldo del cliente (Fallback seguro sin RPC)
-        const { data: cliData, error: cliError } = await window.supabaseClient
-            .from('clientes')
-            .select('saldo')
-            .eq('id', clienteActual.id)
-            .single();
-
-        if (!cliError && cliData) {
-            const nuevoSaldo = (cliData.saldo || 0) + totalVenta;
-            await window.supabaseClient
-                .from('clientes')
-                .update({ saldo: nuevoSaldo })
-                .eq('id', clienteActual.id);
-        }
+        if (error) throw error;
 
         alert('✅ Venta registrada correctamente');
         window.location.href = 'index.html';

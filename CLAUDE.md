@@ -23,7 +23,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 - El esquema está en `supabase-schema.sql` (se ejecuta a mano en el SQL editor de Supabase). Ver "Autenticación y RLS" más abajo.
 - Los clientes tienen `lista_precio` (`minorista` | `mayorista` | `distribuidor`); los productos tienen `precio_minorista` / `precio_mayorista` / `precio_distribuidor`, con `precio_venta` como respaldo. `ventas.js` elige el precio según la lista del cliente; `precios.js` los edita en línea (guarda al perder foco o con Enter).
-- El `saldo` del cliente se actualiza con lectura y luego escritura desde el navegador (en `ventas.js` al vender, en `clientes.js` con pagos); no es atómico.
+- Las ventas se registran con la función `registrar_venta(cliente_id, items)` (RPC, SECURITY INVOKER): en una transacción crea la venta, sus detalles y suma el total al `saldo`; los precios los calcula el servidor según la lista del cliente y rechaza productos inactivos. `ventas.js` solo la invoca. Los movimientos manuales de saldo en `clientes.js` (compra/pago) todavía hacen lectura y luego escritura desde el navegador: no son atómicos ni dejan historial.
 
 ## Esquema y seguridad (estado actual)
 
