@@ -1,7 +1,7 @@
 -- Esquema completo de YogurLac. Ejecutarlo entero en el SQL editor de un proyecto Supabase NUEVO
--- (base vacía). Refleja el proyecto original (kqwnqhayodtjhdksdmfr) sin la función
--- actualizar_saldo_cliente, que no se usa y era un riesgo. Para cambiar una base ya creada
--- usar migraciones en supabase/migrations/.
+-- (base vacía). Aplicado el 2026-09-23 en el proyecto actual (jklsoynymbpwvlaqwzhy) como
+-- migración "schema_inicial". Los archivos de supabase/migrations/ anteriores a esa fecha son del
+-- proyecto original (migrado a este) y quedan solo como referencia histórica.
 --
 -- Acceso: solo los dueños (tabla duenos + es_dueno()) vía RLS. Los usuarios se crean en
 -- Supabase Auth con el registro público desactivado. Después de crear los usuarios, cargarlos:
@@ -247,3 +247,5 @@ begin
     return v_venta_id;
 end;
 $$;
+revoke execute on function public.registrar_venta(uuid, jsonb) from public, anon;
+grant execute on function public.registrar_venta(uuid, jsonb) to authenticated;

@@ -27,7 +27,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 ## Esquema y seguridad (estado actual)
 
-`supabase-schema.sql` es una foto de la base real (proyecto Supabase `kqwnqhayodtjhdksdmfr`, leída el 2026-09-23), no un script incremental. Si se cambian tablas en Supabase, actualizar ese archivo. La base real es la fuente de verdad.
+`supabase-schema.sql` es el esquema completo de la base actual (proyecto Supabase `jklsoynymbpwvlaqwzhy`, cuenta nueva, región sa-east-1; aplicado el 2026-09-23 como migración `schema_inicial`), no un script incremental. Los tres archivos de `supabase/migrations/` fechados 20260923 son del proyecto original ya migrado: referencia histórica, no se vuelven a aplicar. Si se cambian tablas en Supabase, actualizar ese archivo. La base real es la fuente de verdad.
 
 `productos.precio_venta` es NOT NULL (el formulario de precios lo exige).
 
