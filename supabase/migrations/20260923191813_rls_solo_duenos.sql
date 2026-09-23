@@ -1,6 +1,6 @@
--- Acceso solo para los dueños (lista blanca en public.duenos) + RLS en todas las tablas.
--- Aplicar DESPUÉS de crear los usuarios en Supabase Auth y de que el login funcione.
--- Luego cargar los dueños:  insert into public.duenos (user_id) select id from auth.users where email in ('...','...');
+-- APLICADA en Supabase el 2026-09-23 (version 20260923191813). Acceso solo para los dueños
+-- (lista blanca en public.duenos) + RLS en todas las tablas.
+-- Los dueños se cargaron aparte con:  insert into public.duenos (user_id) select id from auth.users where email in (...);
 
 create table if not exists public.duenos (
     user_id uuid primary key references auth.users(id) on delete cascade

@@ -21,7 +21,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 ## Modelo de datos y listas de precios
 
-- El esquema está en `supabase-schema.sql` (se ejecuta a mano en el SQL editor de Supabase). RLS está habilitado con políticas permisivas `USING (true)` "para desarrollo".
+- El esquema está en `supabase-schema.sql` (se ejecuta a mano en el SQL editor de Supabase). Ver "Autenticación y RLS" más abajo.
 - Los clientes tienen `lista_precio` (`minorista` | `mayorista` | `distribuidor`); los productos tienen `precio_minorista` / `precio_mayorista` / `precio_distribuidor`, con `precio_venta` como respaldo. `ventas.js` elige el precio según la lista del cliente; `precios.js` los edita en línea (guarda al perder foco o con Enter).
 - El `saldo` del cliente se actualiza con lectura y luego escritura desde el navegador (en `ventas.js` al vender, en `clientes.js` con pagos); no es atómico.
 
@@ -29,4 +29,8 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 `supabase-schema.sql` es una foto de la base real (proyecto Supabase `kqwnqhayodtjhdksdmfr`, leída el 2026-09-23), no un script incremental. Si se cambian tablas en Supabase, actualizar ese archivo. La base real es la fuente de verdad.
 
-Pendientes de seguridad antes de producción: `ventas` y `venta_detalles` no tienen RLS; el resto tiene políticas `USING (true)`; y `actualizar_saldo_cliente` (SECURITY DEFINER, sin uso en el código) la puede ejecutar el rol `anon`. `productos.precio_venta` es NOT NULL (el formulario de precios lo exige).
+`productos.precio_venta` es NOT NULL (el formulario de precios lo exige).
+
+## Autenticación y RLS
+
+La app la usan solo 2 dueños. Login con Supabase Auth (email + contraseña, registro público desactivado en el panel). `js/auth.js` se carga en todas las páginas, las oculta hasta verificar sesión y redirige a `login.html`; toda página nueva debe incluir `<style id="auth-oculto">body{visibility:hidden}</style>` en el `<head>` y `js/auth.js` justo después de `js/supabase.js`. Eso solo protege la interfaz: los datos los protege RLS, con la política `"Solo duenos"` (`es_dueno()`, que consulta la tabla `duenos`) en todas las tablas. Un usuario nuevo de Auth no ve nada hasta agregarlo a `duenos`. Los cambios de base van como migraciones en `supabase/migrations/` (nombradas con la versión que asigna Supabase al aplicarlas).
