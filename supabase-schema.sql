@@ -249,3 +249,15 @@ end;
 $$;
 revoke execute on function public.registrar_venta(uuid, jsonb) from public, anon;
 grant execute on function public.registrar_venta(uuid, jsonb) to authenticated;
+
+-- Función mínima para el keep-alive diario (.github/workflows/keep-alive.yml). No expone datos.
+create or replace function public.ping()
+returns timestamptz
+language sql
+stable
+security invoker
+set search_path = ''
+as $$
+    select now();
+$$;
+grant execute on function public.ping() to anon, authenticated;

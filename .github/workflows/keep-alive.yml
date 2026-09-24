@@ -1,0 +1,36 @@
+# Mantiene activo el proyecto de Supabase (el plan gratuito lo pausa tras ~1 semana sin actividad).
+# Una vez por día llama a la función public.ping() (no lee tablas ni expone datos).
+# La URL y la anon key (pública por diseño) se leen de js/supabase.js: un solo lugar que actualizar.
+# Nota: GitHub desactiva los workflows programados tras ~60 días sin actividad en el repo;
+# si pasa, reactivarlo desde la pestaña Actions.
+name: Supabase keep-alive
+
+on:
+  schedule:
+    - cron: '17 12 * * *'   # todos los días 12:17 UTC (09:17 Argentina)
+  workflow_dispatch:         # también se puede lanzar a mano desde la pestaña Actions
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Llamar a ping()
+        run: |
+          URL=$(grep -oP "SUPABASE_URL = '\K[^']+" js/supabase.js)
+          KEY=$(grep -oP "SUPABASE_KEY = '\K[^']+" js/supabase.js)
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "No se pudo leer SUPABASE_URL / SUPABASE_KEY de js/supabase.js" >&2
+            exit 1
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-delay 5 \
+            -X POST "$URL/rest/v1/rpc/ping" \
+            -H "apikey: $KEY" \
+            -H "Authorization: Bearer $KEY" \
+            -H "Content-Type: application/json" \
+            -d '{}'
+          echo

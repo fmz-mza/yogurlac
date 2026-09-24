@@ -31,6 +31,10 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 `productos.precio_venta` es NOT NULL (el formulario de precios lo exige).
 
+## Deploy y keep-alive
+
+El sitio se publica con GitHub Pages desde la rama `main` (raíz): https://fmz-mza.github.io/yogurlac/ ; cada push a `main` lo actualiza. El plan gratuito de Supabase pausa el proyecto tras ~1 semana sin actividad, por eso `.github/workflows/keep-alive.yml` llama una vez por día a la función `public.ping()` (lee URL y anon key de `js/supabase.js`). GitHub desactiva los crons tras ~60 días sin actividad en el repo: si pasa, reactivarlo en la pestaña Actions. Sin respaldos automáticos en el plan gratuito (pendiente).
+
 ## Autenticación y RLS
 
 La app la usan solo 2 dueños. Login con Supabase Auth (email + contraseña, registro público desactivado en el panel). `js/auth.js` se carga en todas las páginas, las oculta hasta verificar sesión y redirige a `login.html`; toda página nueva debe incluir `<style id="auth-oculto">body{visibility:hidden}</style>` en el `<head>` y `js/auth.js` justo después de `js/supabase.js`. Eso solo protege la interfaz: los datos los protege RLS, con la política `"Solo duenos"` (`es_dueno()`, que consulta la tabla `duenos`) en todas las tablas. Un usuario nuevo de Auth no ve nada hasta agregarlo a `duenos`. Los cambios de base van como migraciones en `supabase/migrations/` (nombradas con la versión que asigna Supabase al aplicarlas).
