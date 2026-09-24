@@ -52,6 +52,7 @@ async function loadClientes(searchTerm = '', listaPrecio = '') {
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-3">
                     <button onclick="abrirModalEdicion('${cliente.id}')" class="text-blue-600 hover:text-blue-800 font-medium">✏️ Editar</button>
                     <button onclick="abrirModalMovimiento('${cliente.id}', '${cliente.nombre.replace(/'/g, "\\'")}')" class="text-green-600 hover:text-green-800 font-medium">💳 Saldo</button>
+                    <button onclick="abrirHistorial('${cliente.id}', '${cliente.nombre.replace(/'/g, "\\'")}')" class="text-gray-600 hover:text-gray-900 font-medium">📜 Historial</button>
                 </td>
             `;
             tableBody.appendChild(row);
@@ -211,4 +212,64 @@ window.abrirModalMovimiento = function(id, nombre) {
 
 window.cerrarModalMovimiento = function() {
     document.getElementById('modal-movimiento').classList.add('hidden');
+};
+
+// Historial de la cuenta corriente de un cliente (tabla movimientos_cliente).
+// Las ventas y las compras a cuenta suman deuda; los pagos la restan.
+window.abrirHistorial = async function(id, nombre) {
+    document.getElementById('hist-cliente-nombre').textContent = `Cliente: ${nombre}`;
+    const tbody = document.getElementById('hist-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-gray-500">Cargando...</td></tr>';
+    document.getElementById('modal-historial').classList.remove('hidden');
+
+    const { data: movimientos, error } = await window.supabaseClient
+        .from('movimientos_cliente')
+        .select('fecha, tipo, monto, concepto, created_at')
+        .eq('cliente_id', id)
+        .order('created_at', { ascending: true });
+
+    tbody.innerHTML = '';
+
+    if (error) {
+        console.error('Error cargando historial:', error);
+        tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-red-600">No se pudo cargar el historial</td></tr>';
+        return;
+    }
+    if (!movimientos.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-gray-500">Este cliente todavía no tiene movimientos</td></tr>';
+        return;
+    }
+
+    const etiquetas = { venta: '🛒 Venta', compra: '🛒 Compra a cuenta', pago: '💰 Pago' };
+
+    // Saldo acumulado en orden cronológico; se muestra del más nuevo al más viejo
+    let saldo = 0;
+    const filas = movimientos.map(m => {
+        const monto = Number(m.monto);
+        const firmado = m.tipo === 'pago' ? -monto : monto;
+        saldo += firmado;
+        return { m, firmado, saldo };
+    }).reverse();
+
+    filas.forEach(({ m, firmado, saldo }) => {
+        const tr = document.createElement('tr');
+        const celdas = [
+            [new Date(m.fecha + 'T00:00:00').toLocaleDateString('es-AR'), 'text-gray-900'],
+            [etiquetas[m.tipo] || m.tipo, 'text-gray-900'],
+            [m.concepto || '-', 'text-gray-600'],
+            [(firmado < 0 ? '-' : '+') + formatCurrency(Math.abs(firmado)), firmado < 0 ? 'text-green-600 text-right font-medium' : 'text-red-600 text-right font-medium'],
+            [formatCurrency(saldo), 'text-gray-900 text-right font-semibold']
+        ];
+        celdas.forEach(([texto, clases]) => {
+            const td = document.createElement('td');
+            td.className = `px-3 py-2 whitespace-nowrap text-sm ${clases}`;
+            td.textContent = texto; // textContent: el concepto lo escribe el usuario
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+    });
+};
+
+window.cerrarHistorial = function() {
+    document.getElementById('modal-historial').classList.add('hidden');
 };
