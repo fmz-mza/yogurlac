@@ -33,7 +33,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 
 ## Deploy y keep-alive
 
-El sitio se publica con GitHub Pages desde la rama `main` (raíz): https://fmz-mza.github.io/yogurlac/ ; cada push a `main` lo actualiza. El plan gratuito de Supabase pausa el proyecto tras ~1 semana sin actividad, por eso `.github/workflows/keep-alive.yml` llama una vez por día a la función `public.ping()` (lee URL y anon key de `js/supabase.js`). GitHub desactiva los crons tras ~60 días sin actividad en el repo: si pasa, reactivarlo en la pestaña Actions. Sin respaldos automáticos en el plan gratuito (pendiente).
+El sitio se publica con GitHub Pages desde la rama `main` (raíz): https://fmz-mza.github.io/yogurlac/ ; cada push a `main` lo actualiza. El plan gratuito de Supabase pausa el proyecto tras ~1 semana sin actividad, por eso `.github/workflows/keep-alive.yml` llama una vez por día a la función `public.ping()` (lee URL y anon key de `js/supabase.js`). GitHub desactiva los crons tras ~60 días sin actividad en el repo: si pasa, reactivarlo en la pestaña Actions. El plan gratuito no incluye respaldos, por eso `.github/workflows/backup.yml` hace un `pg_dump` diario del esquema `public`, lo **cifra** (el repo es público y los artifacts de repos públicos son descargables por cualquiera) y lo sube como artifact por 90 días. Necesita los secrets del repo `SUPABASE_DB_URL` (cadena "Session pooler", porque la conexión directa es solo IPv6) y `BACKUP_PASSPHRASE`; las instrucciones para descargar, descifrar y restaurar están en los comentarios del workflow. Nunca commitear un volcado sin cifrar.
 
 ## Autenticación y RLS
 

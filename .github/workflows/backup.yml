@@ -1,0 +1,88 @@
+# Respaldo diario de la base de Supabase (el plan gratuito no incluye respaldos automáticos).
+#
+# Hace pg_dump del esquema `public` (tablas + datos), lo comprime y lo CIFRA con una clave
+# antes de subirlo como artifact. El cifrado es obligatorio: el repo es público y los artifacts
+# de un repo público los puede descargar cualquier usuario de GitHub.
+#
+# Secrets necesarios del repo (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL    cadena de conexión "Session pooler" (Supabase > Connect), con la contraseña de la base.
+#                      Se usa el pooler porque la conexión directa es solo IPv6 y GitHub Actions no la alcanza.
+#   BACKUP_PASSPHRASE  clave para cifrar/descifrar. Guardarla en un gestor de contraseñas: sin ella
+#                      los respaldos no se pueden abrir.
+#
+# Descargar: pestaña Actions > corrida > Artifacts. Descifrar en Windows (gpg viene con Git for Windows):
+#   & "C:\Program Files\Git\usr\bin\gpg.exe" -d yogurlac-AAAA-MM-DD.sql.gz.gpg | gzip -d > respaldo.sql
+#   (en Git Bash:  gpg -d archivo.gpg | gunzip > respaldo.sql)
+#
+# Restaurar en un proyecto nuevo: ejecutar supabase-schema.sql NO hace falta (el respaldo ya trae las
+# tablas); crear primero los usuarios en Auth y correr respaldo.sql, y después cargar la tabla `duenos`
+# (se excluye del respaldo porque referencia ids de auth.users, que cambian entre proyectos):
+#   insert into public.duenos (user_id) select id from auth.users where email in ('...','...');
+name: Backup de Supabase
+
+on:
+  schedule:
+    - cron: '23 7 * * *'   # todos los días 07:23 UTC (04:23 Argentina)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Verificar secrets
+        run: |
+          for v in SUPABASE_DB_URL BACKUP_PASSPHRASE; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Falta el secret $v (ver comentarios de .github/workflows/backup.yml)"
+              exit 1
+            fi
+          done
+
+      - name: Instalar cliente PostgreSQL 17
+        run: |
+          # El servidor es Postgres 17; pg_dump debe ser de la misma versión o superior
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+
+      - name: Volcar, comprimir y cifrar
+        run: |
+          FECHA=$(date -u +%Y-%m-%d)
+          ARCHIVO="yogurlac-$FECHA.sql.gz.gpg"
+
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" \
+            --schema=public --no-owner --no-privileges \
+            --exclude-table-data=public.duenos \
+            > dump.sql
+
+          # Sanidad: el volcado debe existir y contener las tablas de la app
+          test -s dump.sql
+          grep -q "CREATE TABLE public.clientes" dump.sql
+          grep -q "CREATE TABLE public.movimientos_cliente" dump.sql
+
+          gzip -9 -c dump.sql | gpg --batch --yes --pinentry-mode loopback \
+            --passphrase "$BACKUP_PASSPHRASE" --symmetric --cipher-algo AES256 \
+            -o "$ARCHIVO"
+
+          # Comprobar que se puede descifrar y descomprimir antes de subirlo
+          gpg --batch --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" -d "$ARCHIVO" | gzip -t
+
+          rm -f dump.sql
+          echo "ARCHIVO=$ARCHIVO" >> "$GITHUB_ENV"
+          ls -l "$ARCHIVO"
+
+      - name: Subir respaldo cifrado
+        uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-${{ github.run_id }}
+          path: ${{ env.ARCHIVO }}
+          retention-days: 90
+          if-no-files-found: error

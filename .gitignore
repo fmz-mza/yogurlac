@@ -1,0 +1,4 @@
+# Volcados de base de datos sin cifrar: nunca deben subirse (el repo es público)
+dump.sql
+respaldo*.sql
+*.sql.gz
