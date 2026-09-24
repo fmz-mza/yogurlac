@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pedidos - YogurLac</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css"> <style id="auth-oculto">body{visibility:hidden}</style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-blue-600">🥛 YogurLac</h1>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="index.html" class="text-gray-700 hover:text-blue-600">Dashboard</a>
+                    <a href="pedidos.html" class="text-blue-600 font-semibold border-b-2 border-blue-600">Pedidos</a>
+                    <a href="ventas.html"  class="text-gray-700 hover:text-blue-600">Nueva Venta</a>
+                    <a href="clientes.html" class="text-gray-700 hover:text-blue-600">Clientes</a>
+                    <a href="precios.html" class="text-gray-700 hover:text-blue-600">Precios</a>
+                    <a href="proveedores.html" class="text-gray-700 hover:text-blue-600">Proveedores</a>
+                </div>
+                <button id="mobile-menu-btn" class="md:hidden flex items-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+            <a href="index.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Dashboard</a>
+            <a href="pedidos.html" class="block px-4 py-2 text-blue-600 font-semibold bg-blue-50">Pedidos</a>
+            <a href="ventas.html" class="block px-4 py-2 text-green-600 font-semibold bg-green-50 hover:bg-green-100">🛒 Nueva Venta</a>
+            <a href="clientes.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Clientes</a>
+            <a href="precios.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Precios</a>
+            <a href="proveedores.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Proveedores</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6 flex justify-between items-center gap-3">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">Pedidos</h2>
+                <p class="text-gray-600 mt-1">Cargalos una sola vez: de acá salen la compra en Yogurlac y la entrega</p>
+            </div>
+            <button id="btn-nuevo-pedido" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition whitespace-nowrap">
+                + Nuevo Pedido
+            </button>
+        </div>
+
+        <!-- Selector de fecha -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-center gap-2">
+            <button id="btn-dia-anterior" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día anterior">←</button>
+            <input type="date" id="fecha-pedidos" class="border border-gray-300 rounded-md px-3 py-2">
+            <button id="btn-dia-siguiente" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día siguiente">→</button>
+            <button id="btn-hoy" class="px-3 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100">Hoy</button>
+            <span id="fecha-legible" class="text-sm text-gray-500 ml-2"></span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Resumen de lo que hay que comprar -->
+            <div class="bg-white rounded-lg shadow overflow-hidden lg:col-span-1 self-start">
+                <div class="px-4 py-3 border-b border-gray-200">
+                    <h3 class="text-base font-semibold text-gray-900">A comprar en Yogurlac</h3>
+                    <p class="text-xs text-gray-500">Suma de los pedidos pendientes de este día</p>
+                </div>
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Cantidad</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resumen-compra-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+
+            <!-- Lista de pedidos del día -->
+            <div class="lg:col-span-2">
+                <div id="lista-pedidos" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- MODAL PEDIDO (CREAR Y EDITAR) -->
+        <div id="modal-pedido" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div class="relative p-5 border w-full max-w-xl shadow-lg rounded-md bg-white mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 id="modal-pedido-titulo" class="text-lg leading-6 font-medium text-gray-900 mb-4">Nuevo Pedido</h3>
+                <form id="form-pedido" class="space-y-4">
+                    <input type="hidden" id="ped-id-edit" value="">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cliente *</label>
+                            <select id="ped-cliente" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
+                                <option value="">-- Elegir cliente --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Fecha de entrega *</label>
+                            <input type="date" id="ped-fecha" required class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Productos *</label>
+                            <button type="button" id="btn-agregar-linea" class="text-sm text-blue-600 hover:text-blue-800">+ Agregar producto</button>
+                        </div>
+                        <div id="ped-lineas" class="space-y-2"></div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Observaciones</label>
+                        <input type="text" id="ped-obs" placeholder="Opcional" class="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2">
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button type="button" id="btn-cancelar-pedido-modal" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Guardar pedido</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/utils.js"></script>
+    <script src="js/pedidos.js"></script>
+</body>
+</html>
