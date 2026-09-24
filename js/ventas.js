@@ -137,7 +137,7 @@ function renderizarCarrito() {
     carrito.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="px-6 py-4 text-sm">${item.nombre}</td>
+            <td class="px-6 py-4 text-sm">${escapeHtml(item.nombre)}</td>
             <td class="px-6 py-4 text-sm">${item.cantidad}</td>
             <td class="px-6 py-4 text-sm">${formatCurrency(item.precio_unitario)}</td>
             <td class="px-6 py-4 text-sm font-semibold">${formatCurrency(item.subtotal)}</td>

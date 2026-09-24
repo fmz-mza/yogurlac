@@ -52,10 +52,10 @@ async function loadVentasDiarias() {
                     ${formatDate(venta.fecha)}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${venta.proveedores?.nombre || 'N/A'}
+                    ${escapeHtml(venta.proveedores?.nombre || 'N/A')}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${venta.productos?.nombre || 'N/A'}
+                    ${escapeHtml(venta.productos?.nombre || 'N/A')}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     ${venta.cantidad}
@@ -114,7 +114,7 @@ async function loadCuentaCorriente() {
                     ${formatDate(mov.fecha)}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${mov.concepto}
+                    ${escapeHtml(mov.concepto)}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">
                     ${mov.debe ? formatCurrency(mov.debe) : '-'}

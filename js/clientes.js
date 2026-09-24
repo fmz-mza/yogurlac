@@ -1,4 +1,6 @@
 // Clientes functionality
+const clientesPorId = new Map(); // id -> cliente, para no pasar nombres dentro de onclick
+
 document.addEventListener('DOMContentLoaded', async () => {
     // Mobile menu toggle
     const mobileMenuBtn = document.getElementById('mobile-menu-btn');
@@ -20,7 +22,9 @@ async function loadClientes(searchTerm = '', listaPrecio = '') {
         let query = window.supabaseClient.from('clientes').select('*');
 
         if (searchTerm) {
-            query = query.or(`nombre.ilike.%${searchTerm}%,telefono.ilike.%${searchTerm}%`);
+            // Se quitan los caracteres con significado especial en el filtro de PostgREST
+            const termino = searchTerm.replace(/[,()%*\\]/g, ' ').trim();
+            if (termino) query = query.or(`nombre.ilike.%${termino}%,telefono.ilike.%${termino}%`);
         }
 
         if (listaPrecio) {
@@ -34,16 +38,18 @@ async function loadClientes(searchTerm = '', listaPrecio = '') {
         if (!tableBody) return;
         
         tableBody.innerHTML = '';
+        clientesPorId.clear();
 
         clientes.forEach(cliente => {
+            clientesPorId.set(cliente.id, cliente);
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${cliente.nombre}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${cliente.telefono || 'N/A'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${cliente.direccion || 'N/A'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(cliente.nombre)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(cliente.telefono || 'N/A')}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(cliente.direccion || 'N/A')}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getListaPrecioColor(cliente.lista_precio)}">
-                        ${cliente.lista_precio || 'Sin asignar'}
+                        ${escapeHtml(cliente.lista_precio || 'Sin asignar')}
                     </span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${cliente.saldo > 0 ? 'text-red-600' : 'text-green-600'}">
@@ -51,8 +57,8 @@ async function loadClientes(searchTerm = '', listaPrecio = '') {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex gap-3">
                     <button onclick="abrirModalEdicion('${cliente.id}')" class="text-blue-600 hover:text-blue-800 font-medium">✏️ Editar</button>
-                    <button onclick="abrirModalMovimiento('${cliente.id}', '${cliente.nombre.replace(/'/g, "\\'")}')" class="text-green-600 hover:text-green-800 font-medium">💳 Saldo</button>
-                    <button onclick="abrirHistorial('${cliente.id}', '${cliente.nombre.replace(/'/g, "\\'")}')" class="text-gray-600 hover:text-gray-900 font-medium">📜 Historial</button>
+                    <button onclick="abrirModalMovimiento('${cliente.id}')" class="text-green-600 hover:text-green-800 font-medium">💳 Saldo</button>
+                    <button onclick="abrirHistorial('${cliente.id}')" class="text-gray-600 hover:text-gray-900 font-medium">📜 Historial</button>
                 </td>
             `;
             tableBody.appendChild(row);
@@ -202,7 +208,8 @@ window.abrirModalEdicion = async function(id) {
     modal.classList.remove('hidden');
 };
 
-window.abrirModalMovimiento = function(id, nombre) {
+window.abrirModalMovimiento = function(id) {
+    const nombre = clientesPorId.get(id)?.nombre || '';
     const modal = document.getElementById('modal-movimiento');
     document.getElementById('mov-cliente-id').value = id;
     document.getElementById('mov-cliente-nombre').textContent = `Cliente: ${nombre}`;
@@ -216,7 +223,8 @@ window.cerrarModalMovimiento = function() {
 
 // Historial de la cuenta corriente de un cliente (tabla movimientos_cliente).
 // Las ventas y las compras a cuenta suman deuda; los pagos la restan.
-window.abrirHistorial = async function(id, nombre) {
+window.abrirHistorial = async function(id) {
+    const nombre = clientesPorId.get(id)?.nombre || '';
     document.getElementById('hist-cliente-nombre').textContent = `Cliente: ${nombre}`;
     const tbody = document.getElementById('hist-body');
     tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-6 text-center text-gray-500">Cargando...</td></tr>';

@@ -90,7 +90,7 @@ function renderizarTablaEditable(productos) {
         ];
 
         let htmlCeldas = `
-            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 min-w-[150px]">${p.nombre}</td>
+            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 min-w-[150px]">${escapeHtml(p.nombre)}</td>
             <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-600">${formatCurrency(p.costo)}</td>
         `;
 
@@ -122,11 +122,11 @@ function renderizarTablaEditable(productos) {
         htmlCeldas += `
             <td class="px-4 py-3 whitespace-nowrap text-right">
                 <div class="flex gap-2 justify-end">
-                    <button onclick="toggleProductoActivo('${p.id}', '${p.nombre.replace(/'/g, "\\'")}', true)" 
+                    <button onclick="toggleProductoActivo('${p.id}', true)" 
                             class="text-xs font-medium px-3 py-1 rounded border border-yellow-300 text-yellow-700 hover:bg-yellow-50 transition-colors min-h-[36px]">
                         ⏸ Desactivar
                     </button>
-                    <button onclick="eliminarProductoDefinitivo('${p.id}', '${p.nombre.replace(/'/g, "\\'")}')" 
+                    <button onclick="eliminarProductoDefinitivo('${p.id}')" 
                             class="text-xs font-medium px-3 py-1 rounded border border-red-200 text-red-600 hover:bg-red-50 transition-colors min-h-[36px]"
                             title="Eliminación permanente">
                         🗑️
@@ -187,7 +187,8 @@ window.guardarPrecioInline = async function(input) {
 };
 
 // Activar / Desactivar producto
-window.toggleProductoActivo = async function(id, nombre, estadoActual) {
+window.toggleProductoActivo = async function(id, estadoActual) {
+    const nombre = productosCache.find(p => p.id === id)?.nombre || '';
     const nuevoEstado = !estadoActual;
     
     if (!nuevoEstado && !confirm(`¿Desactivar "${nombre}"?\nNo aparecerá en nuevas ventas ni en esta lista.`)) return;
@@ -214,7 +215,8 @@ window.toggleProductoActivo = async function(id, nombre, estadoActual) {
 };
 
 // Eliminación definitiva (con manejo de FK)
-window.eliminarProductoDefinitivo = async function(id, nombre) {
+window.eliminarProductoDefinitivo = async function(id) {
+    const nombre = productosCache.find(p => p.id === id)?.nombre || '';
     if (!confirm(`⚠️ ELIMINACIÓN PERMANENTE\n¿Borrar "${nombre}" para siempre?\nEsto no se puede deshacer.`)) return;
 
     try {

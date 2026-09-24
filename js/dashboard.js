@@ -129,8 +129,8 @@ async function loadDashboardData() {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td class="px-6 py-4 text-sm">${formatDate(f.fecha)}</td>
-                <td class="px-6 py-4 text-sm">${f.cliente}</td>
-                <td class="px-6 py-4 text-sm">${f.producto}</td>
+                <td class="px-6 py-4 text-sm">${escapeHtml(f.cliente)}</td>
+                <td class="px-6 py-4 text-sm">${escapeHtml(f.producto)}</td>
                 <td class="px-6 py-4 text-sm">${f.cantidad}</td>
                 <td class="px-6 py-4 text-sm font-bold">${formatCurrency(f.total)}</td>
             `;

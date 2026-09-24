@@ -17,6 +17,7 @@ Abrir cualquier `.html`, o servir la raíz con un servidor estático (p. ej. `py
 - La navbar (escritorio + menú móvil) está **copiada y pegada en cada HTML**: agregar o renombrar una página implica editar la nav en todos, incluido el estilo del link activo y el toggle del menú móvil en el script de cada página.
 - El renderizado es imperativo: los scripts arman filas con `innerHTML` / `createElement` y usan handlers `onclick=` inline, por eso las funciones se cuelgan de `window` (`window.guardarPrecioInline = ...`). Mantener ese patrón al agregar acciones por fila. Cada página guarda una caché a nivel de módulo (p. ej. `productosCache` en `precios.js` y `ventas.js`) y vuelve a renderizar desde ella.
 - `formatCurrency` (`Intl.NumberFormat` es-AR / ARS) está duplicada en cada script en lugar de compartirse.
+- `js/utils.js` (cargado después de `js/auth.js` en cada página menos el login) define `escapeHtml()`. **Todo texto escrito por un usuario (nombres, teléfono, dirección, concepto, etc.) que se inserte con `innerHTML` debe pasar por `escapeHtml()`**, o bien usarse con `textContent`. Los botones con `onclick=` inline reciben solo el id (UUID) y la función busca el resto en la caché de la página (`clientesPorId` en `clientes.js`, `productosCache` en `precios.js`); nunca se interpolan nombres dentro del atributo.
 - Los textos de UI, comentarios e identificadores están en español.
 
 ## Modelo de datos y listas de precios
