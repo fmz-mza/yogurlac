@@ -71,7 +71,8 @@ async function loadDashboardData() {
                 venta_detalles (
                     cantidad,
                     precio_unitario,
-                    productos ( nombre, costo )
+                    costo_unitario,
+                    productos ( nombre )
                 )
             `)
             .gte('fecha', dateFrom)
@@ -95,7 +96,8 @@ async function loadDashboardData() {
             if (v.venta_detalles) {
                 v.venta_detalles.forEach(d => {
                     const cant = d.cantidad || 0;
-                    const costoUnit = d.productos?.costo || 0;
+                    // Costo guardado en la venta (no el actual del producto): la ganancia pasada no cambia
+                    const costoUnit = Number(d.costo_unitario) || 0;
                     
                     totalCosto += costoUnit * cant;
                     totalProductos += cant;
