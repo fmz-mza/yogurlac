@@ -204,7 +204,8 @@ function initModalesProveedor() {
                 p_proveedor_id: document.getElementById('mov-prov-id').value,
                 p_tipo: document.getElementById('mov-prov-tipo').value,
                 p_monto: parseFloat(document.getElementById('mov-prov-monto').value),
-                p_concepto: document.getElementById('mov-prov-concepto').value
+                p_concepto: document.getElementById('mov-prov-concepto').value,
+                p_fecha: document.getElementById('mov-prov-fecha').value || null
             });
             if (error) throw error;
 
@@ -240,6 +241,7 @@ window.abrirModalMovProv = function(id) {
     document.getElementById('mov-prov-id').value = id;
     document.getElementById('mov-prov-nombre').textContent = `Proveedor: ${nombre}`;
     document.getElementById('form-mov-prov').reset();
+    document.getElementById('mov-prov-fecha').value = fechaLocal(); // por defecto hoy
     document.getElementById('modal-mov-prov').classList.remove('hidden');
 };
 
