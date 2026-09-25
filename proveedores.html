@@ -33,22 +33,21 @@
         </div>
 
         <!-- Estado de cuenta del día (suma de todos los proveedores) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
             <div class="bg-white rounded-lg shadow p-5">
-                <p id="lbl-anterior" class="text-sm font-medium text-gray-600">Debías al cierre de ayer</p>
+                <p class="text-sm font-medium text-gray-600">Saldo que se le debe a proveedores</p>
                 <p id="res-anterior" class="text-2xl font-bold text-gray-900 mt-2">$0,00</p>
+                <p id="sub-anterior" class="text-xs text-gray-500 mt-1">al cierre de ayer</p>
             </div>
             <div class="bg-white rounded-lg shadow p-5">
-                <p id="lbl-compras" class="text-sm font-medium text-gray-600">Compras de hoy (suman)</p>
+                <p class="text-sm font-medium text-gray-600">Saldo hoy</p>
                 <p id="res-compras" class="text-2xl font-bold text-red-600 mt-2">$0,00</p>
+                <p id="sub-compras" class="text-xs text-gray-500 mt-1">suma de las compras de hoy</p>
             </div>
             <div class="bg-white rounded-lg shadow p-5">
-                <p id="lbl-pagos" class="text-sm font-medium text-gray-600">Pagos y créditos de hoy (restan)</p>
-                <p id="res-pagos" class="text-2xl font-bold text-green-600 mt-2">$0,00</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-5">
-                <p id="lbl-al-dia" class="text-sm font-medium text-gray-600">Saldo hoy</p>
+                <p class="text-sm font-medium text-gray-600">Total que se le debe hoy</p>
                 <p id="res-al-dia" class="text-2xl font-bold text-gray-900 mt-2">$0,00</p>
+                <p id="sub-al-dia" class="text-xs text-gray-500 mt-1">saldo de ayer + hoy</p>
             </div>
         </div>
 

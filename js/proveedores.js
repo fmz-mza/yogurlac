@@ -85,18 +85,19 @@ function renderProveedores() {
     const esHoy = fecha === fechaLocal();
     const ayer = sumarDias(fecha, -1);
     document.getElementById('fecha-legible').textContent = fechaLegible(fecha);
-    document.getElementById('lbl-anterior').textContent = esHoy ? 'Debías al cierre de ayer' : `Debías al cierre del ${fechaCorta(ayer)}`;
-    document.getElementById('lbl-compras').textContent = esHoy ? 'Compras de hoy (suman)' : `Compras del ${fechaCorta(fecha)} (suman)`;
-    document.getElementById('lbl-pagos').textContent = esHoy ? 'Pagos y créditos de hoy (restan)' : `Pagos y créditos del ${fechaCorta(fecha)} (restan)`;
-    document.getElementById('lbl-al-dia').textContent = esHoy ? 'Saldo hoy' : `Saldo al cierre del ${fechaCorta(fecha)}`;
     document.getElementById('th-anterior').textContent = esHoy ? 'Al cierre de ayer' : `Al cierre del ${fechaCorta(ayer)}`;
     document.getElementById('th-dia').textContent = esHoy ? 'Hoy' : fechaCorta(fecha);
 
     const suma = (campo) => [...resumenPorProveedor.values()].reduce((s, r) => s + (Number(r[campo]) || 0), 0);
+    const salidasDia = suma('pagos') + suma('creditos');
     document.getElementById('res-anterior').textContent = formatCurrency(suma('saldo_anterior'));
+    document.getElementById('sub-anterior').textContent = esHoy ? 'al cierre de ayer' : `al cierre del ${fechaCorta(ayer)}`;
     document.getElementById('res-compras').textContent = formatCurrency(suma('compras'));
-    document.getElementById('res-pagos').textContent = formatCurrency(suma('pagos') + suma('creditos'));
+    document.getElementById('sub-compras').textContent =
+        (esHoy ? 'suma de las compras de hoy' : `suma de las compras del ${fechaCorta(fecha)}`) +
+        (salidasDia > 0 ? ` · pagos y créditos: −${formatCurrency(salidasDia)}` : '');
     document.getElementById('res-al-dia').textContent = formatCurrency(suma('saldo_al_dia'));
+    document.getElementById('sub-al-dia').textContent = esHoy ? 'saldo de ayer + hoy' : `al cierre del ${fechaCorta(fecha)}`;
 
     tbody.innerHTML = '';
 
