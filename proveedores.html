@@ -54,15 +54,32 @@
             </button>
         </div>
 
-        <!-- Resumen -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-            <div class="bg-white rounded-lg shadow p-6">
-                <p class="text-sm font-medium text-gray-600">Total que se le debe a proveedores</p>
-                <p id="total-deuda" class="text-2xl font-bold text-red-600 mt-2">$0,00</p>
+        <!-- Día del estado de cuenta -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-center gap-2">
+            <button id="btn-dia-anterior" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día anterior">←</button>
+            <input type="date" id="fecha-cuenta" class="border border-gray-300 rounded-md px-3 py-2">
+            <button id="btn-dia-siguiente" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día siguiente">→</button>
+            <button id="btn-hoy" class="px-3 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100">Hoy</button>
+            <span id="fecha-legible" class="text-sm text-gray-500 ml-2"></span>
+        </div>
+
+        <!-- Estado de cuenta del día (suma de todos los proveedores) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-lg shadow p-5">
+                <p id="lbl-anterior" class="text-sm font-medium text-gray-600">Debías al cierre de ayer</p>
+                <p id="res-anterior" class="text-2xl font-bold text-gray-900 mt-2">$0,00</p>
             </div>
-            <div class="bg-white rounded-lg shadow p-6">
-                <p class="text-sm font-medium text-gray-600">Proveedores cargados</p>
-                <p id="total-proveedores" class="text-2xl font-bold text-gray-900 mt-2">0</p>
+            <div class="bg-white rounded-lg shadow p-5">
+                <p id="lbl-compras" class="text-sm font-medium text-gray-600">Compras de hoy (suman)</p>
+                <p id="res-compras" class="text-2xl font-bold text-red-600 mt-2">$0,00</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-5">
+                <p id="lbl-pagos" class="text-sm font-medium text-gray-600">Pagos y créditos de hoy (restan)</p>
+                <p id="res-pagos" class="text-2xl font-bold text-green-600 mt-2">$0,00</p>
+            </div>
+            <div class="bg-white rounded-lg shadow p-5">
+                <p id="lbl-al-dia" class="text-sm font-medium text-gray-600">Saldo hoy</p>
+                <p id="res-al-dia" class="text-2xl font-bold text-gray-900 mt-2">$0,00</p>
             </div>
         </div>
 
@@ -82,7 +99,9 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo (se le debe)</th>
+                            <th id="th-anterior" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Al cierre de ayer</th>
+                            <th id="th-dia" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoy</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo actual</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>

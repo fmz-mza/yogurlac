@@ -2,6 +2,26 @@
 // saldo > 0 = deuda propia con el proveedor. Las compras a cuenta lo suben, los pagos lo bajan.
 const proveedoresPorId = new Map(); // id -> proveedor, para no pasar nombres dentro de onclick
 let filtroProveedor = '';
+const resumenPorProveedor = new Map(); // proveedor_id -> estado de cuenta del día elegido
+
+// Fecha local (YYYY-MM-DD) sin pasar por UTC, para que de noche no salte al día siguiente
+function fechaLocal(d = new Date()) {
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    const dia = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mes}-${dia}`;
+}
+function sumarDias(fechaISO, dias) {
+    const [a, m, d] = fechaISO.split('-').map(Number);
+    return fechaLocal(new Date(a, m - 1, d + dias));
+}
+function fechaCorta(fechaISO) {
+    const [, m, d] = fechaISO.split('-');
+    return `${d}/${m}`;
+}
+function fechaLegible(fechaISO) {
+    const [a, m, d] = fechaISO.split('-').map(Number);
+    return new Date(a, m - 1, d).toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' });
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Mobile menu toggle
@@ -18,19 +38,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderProveedores();
     });
 
+    // Día del estado de cuenta (por defecto hoy)
+    const inputFecha = document.getElementById('fecha-cuenta');
+    inputFecha.value = fechaLocal();
+    inputFecha.addEventListener('change', loadProveedores);
+    document.getElementById('btn-hoy').addEventListener('click', () => { inputFecha.value = fechaLocal(); loadProveedores(); });
+    document.getElementById('btn-dia-anterior').addEventListener('click', () => { inputFecha.value = sumarDias(inputFecha.value, -1); loadProveedores(); });
+    document.getElementById('btn-dia-siguiente').addEventListener('click', () => { inputFecha.value = sumarDias(inputFecha.value, 1); loadProveedores(); });
+
     await loadProveedores();
 });
 
 async function loadProveedores() {
     try {
-        const { data, error } = await window.supabaseClient
-            .from('proveedores')
-            .select('*')
-            .order('nombre');
+        const fecha = document.getElementById('fecha-cuenta').value || fechaLocal();
+        const [{ data, error }, { data: resumen, error: errResumen }] = await Promise.all([
+            window.supabaseClient.from('proveedores').select('*').order('nombre'),
+            window.supabaseClient.rpc('resumen_cuenta_proveedores', { p_fecha: fecha })
+        ]);
         if (error) throw error;
+        if (errResumen) throw errResumen;
 
         proveedoresPorId.clear();
         (data || []).forEach(p => proveedoresPorId.set(p.id, p));
+        resumenPorProveedor.clear();
+        (resumen || []).forEach(r => resumenPorProveedor.set(r.proveedor_id, r));
         renderProveedores();
     } catch (error) {
         console.error('Error cargando proveedores:', error);
@@ -48,15 +80,28 @@ function renderProveedores() {
             .some(v => (v || '').toLowerCase().includes(filtroProveedor));
     });
 
-    // Resumen (sobre todos los proveedores, no solo los filtrados)
-    const totalDeuda = todos.reduce((suma, p) => suma + Math.max(Number(p.saldo) || 0, 0), 0);
-    document.getElementById('total-deuda').textContent = formatCurrency(totalDeuda);
-    document.getElementById('total-proveedores').textContent = todos.length;
+    // Estado de cuenta del día elegido (suma de TODOS los proveedores, no solo los filtrados)
+    const fecha = document.getElementById('fecha-cuenta').value || fechaLocal();
+    const esHoy = fecha === fechaLocal();
+    const ayer = sumarDias(fecha, -1);
+    document.getElementById('fecha-legible').textContent = fechaLegible(fecha);
+    document.getElementById('lbl-anterior').textContent = esHoy ? 'Debías al cierre de ayer' : `Debías al cierre del ${fechaCorta(ayer)}`;
+    document.getElementById('lbl-compras').textContent = esHoy ? 'Compras de hoy (suman)' : `Compras del ${fechaCorta(fecha)} (suman)`;
+    document.getElementById('lbl-pagos').textContent = esHoy ? 'Pagos y créditos de hoy (restan)' : `Pagos y créditos del ${fechaCorta(fecha)} (restan)`;
+    document.getElementById('lbl-al-dia').textContent = esHoy ? 'Saldo hoy' : `Saldo al cierre del ${fechaCorta(fecha)}`;
+    document.getElementById('th-anterior').textContent = esHoy ? 'Al cierre de ayer' : `Al cierre del ${fechaCorta(ayer)}`;
+    document.getElementById('th-dia').textContent = esHoy ? 'Hoy' : fechaCorta(fecha);
+
+    const suma = (campo) => [...resumenPorProveedor.values()].reduce((s, r) => s + (Number(r[campo]) || 0), 0);
+    document.getElementById('res-anterior').textContent = formatCurrency(suma('saldo_anterior'));
+    document.getElementById('res-compras').textContent = formatCurrency(suma('compras'));
+    document.getElementById('res-pagos').textContent = formatCurrency(suma('pagos') + suma('creditos'));
+    document.getElementById('res-al-dia').textContent = formatCurrency(suma('saldo_al_dia'));
 
     tbody.innerHTML = '';
 
     if (visibles.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">${
+        tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500">${
             todos.length === 0 ? 'Todavía no cargaste proveedores' : 'No se encontraron proveedores'
         }</td></tr>`;
         return;
@@ -64,12 +109,24 @@ function renderProveedores() {
 
     visibles.forEach(p => {
         const saldo = Number(p.saldo) || 0;
+        const r = resumenPorProveedor.get(p.id) || {};
+        const anterior = Number(r.saldo_anterior) || 0;
+        const compras = Number(r.compras) || 0;
+        const salidas = (Number(r.pagos) || 0) + (Number(r.creditos) || 0);
+        const movimientosDia = (compras === 0 && salidas === 0)
+            ? '<span class="text-gray-400">—</span>'
+            : `${compras > 0 ? `<div class="text-red-600">+${formatCurrency(compras)} compras</div>` : ''}
+               ${salidas > 0 ? `<div class="text-green-600">−${formatCurrency(salidas)} pagos</div>` : ''}`;
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(p.nombre)}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(p.contacto || 'N/A')}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(p.telefono || 'N/A')}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${escapeHtml(p.email || 'N/A')}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium ${anterior > 0 ? 'text-red-600' : 'text-green-600'}">
+                ${formatCurrency(anterior)}
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">${movimientosDia}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-bold ${saldo > 0 ? 'text-red-600' : 'text-green-600'}">
                 ${formatCurrency(saldo)}
             </td>
