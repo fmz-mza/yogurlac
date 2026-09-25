@@ -2,3 +2,6 @@
 dump.sql
 respaldo*.sql
 *.sql.gz
+
+# Configuración local de herramientas de desarrollo (servidor de prueba)
+.claude/

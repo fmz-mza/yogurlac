@@ -90,7 +90,7 @@ async function cargarDia() {
     // Total pedido por producto (solo pedidos pendientes)
     pedidoPorProducto = new Map();
     (pedidos || []).forEach(p => (p.pedido_items || []).forEach(it => {
-        pedidoPorProducto.set(it.producto_id, (pedidoPorProducto.get(it.producto_id) || 0) + it.cantidad);
+        pedidoPorProducto.set(it.producto_id, redondearCantidad((pedidoPorProducto.get(it.producto_id) || 0) + Number(it.cantidad)));
     }));
 
     comprasPorId.clear();
@@ -176,13 +176,13 @@ function renderRemito() {
         // Pedido
         const tdPed = document.createElement('td');
         tdPed.className = 'px-4 py-2 text-sm text-right text-gray-600';
-        tdPed.textContent = l.pedido > 0 ? l.pedido : '—';
+        tdPed.textContent = l.pedido > 0 ? formatCantidad(l.pedido) : '—';
 
         // Recibido
         const tdCant = document.createElement('td');
         tdCant.className = 'px-4 py-2';
         const inCant = document.createElement('input');
-        inCant.type = 'number'; inCant.min = '0'; inCant.step = '1';
+        inCant.type = 'number'; inCant.min = '0'; inCant.step = '0.001'; // admite decimales (productos por kilo)
         inCant.className = 'w-24 border border-gray-300 rounded-md px-2 py-1';
         inCant.value = l.cantidad;
         const dif = document.createElement('div');
@@ -214,14 +214,14 @@ function renderRemito() {
         tdQuitar.appendChild(quitar);
 
         const refrescar = () => {
-            l.cantidad = parseInt(inCant.value, 10) || 0;
+            l.cantidad = redondearCantidad(parseFloat(inCant.value) || 0);
             l.costo = parseFloat(inCosto.value) || 0;
             tdSub.textContent = formatCurrency(l.cantidad * l.costo);
 
             // Diferencia entre lo recibido y lo pedido
-            if (l.pedido > 0 && l.cantidad !== l.pedido) {
-                const d = l.cantidad - l.pedido;
-                dif.textContent = d < 0 ? `Faltan ${-d}` : `Sobran ${d}`;
+            const d = redondearCantidad(l.cantidad - l.pedido);
+            if (l.pedido > 0 && d !== 0) {
+                dif.textContent = d < 0 ? `Faltan ${formatCantidad(-d)}` : `Sobran ${formatCantidad(d)}`;
                 dif.className = 'text-xs mt-1 ' + (d < 0 ? 'text-red-600' : 'text-blue-600');
             } else {
                 dif.textContent = '';
@@ -299,7 +299,7 @@ function renderCompras(compras) {
     compras.forEach(c => {
         const anulada = c.estado === 'anulada';
         const items = (c.compra_items || [])
-            .map(it => `<li>${it.cantidad} × ${escapeHtml(it.productos?.nombre || '(producto)')} a ${formatCurrency(it.costo_unitario)}</li>`)
+            .map(it => `<li>${formatCantidad(it.cantidad)} ×${escapeHtml(it.productos?.nombre || '(producto)')} a ${formatCurrency(it.costo_unitario)}</li>`)
             .join('');
         const div = document.createElement('div');
         div.className = 'px-4 py-3' + (anulada ? ' opacity-60' : '');

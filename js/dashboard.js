@@ -121,7 +121,7 @@ async function loadDashboardData() {
         document.getElementById('total-ventas').textContent = formatCurrency(totalVentas);
         document.getElementById('margen-ganancia').textContent = `${margen}%`;
         document.getElementById('clientes-activos').textContent = uniqueClientes.size;
-        document.getElementById('productos-vendidos').textContent = totalProductos;
+        document.getElementById('productos-vendidos').textContent = formatCantidad(totalProductos);
 
         // Renderizar Tabla
         const tbody = document.getElementById('ventas-table');
@@ -133,7 +133,7 @@ async function loadDashboardData() {
                 <td class="px-6 py-4 text-sm">${formatDate(f.fecha)}</td>
                 <td class="px-6 py-4 text-sm">${escapeHtml(f.cliente)}</td>
                 <td class="px-6 py-4 text-sm">${escapeHtml(f.producto)}</td>
-                <td class="px-6 py-4 text-sm">${f.cantidad}</td>
+                <td class="px-6 py-4 text-sm">${formatCantidad(f.cantidad)}</td>
                 <td class="px-6 py-4 text-sm font-bold">${formatCurrency(f.total)}</td>
             `;
             tbody.appendChild(tr);

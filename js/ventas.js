@@ -80,7 +80,7 @@ function cargarProductosParaLista(lista) {
 
 function actualizarPreview() {
     const prodSelect = document.getElementById('venta-producto');
-    const cant = parseInt(document.getElementById('venta-cantidad').value) || 0;
+    const cant = parseFloat(document.getElementById('venta-cantidad').value) || 0;
     const precio = parseFloat(prodSelect.options[prodSelect.selectedIndex]?.dataset.precio || 0);
     
     const preview = document.getElementById('precio-preview');
@@ -96,14 +96,15 @@ function agregarAlCarrito() {
     const productId = prodSelect.value;
     if (!productId) return alert('Selecciona un producto');
 
-    const cantidad = parseInt(document.getElementById('venta-cantidad').value);
+    const cantidad = redondearCantidad(parseFloat(document.getElementById('venta-cantidad').value));
+    if (!(cantidad > 0)) return alert('Ingresá una cantidad válida');
     const precio = parseFloat(prodSelect.options[prodSelect.selectedIndex].dataset.precio);
     const nombre = prodSelect.options[prodSelect.selectedIndex].dataset.nombre;
 
     // Verificar si ya existe en carrito para sumar cantidad
     const existente = carrito.find(item => item.producto_id === productId);
     if (existente) {
-        existente.cantidad += cantidad;
+        existente.cantidad = redondearCantidad(existente.cantidad + cantidad);
         existente.subtotal = existente.cantidad * existente.precio_unitario;
     } else {
         carrito.push({
@@ -138,7 +139,7 @@ function renderizarCarrito() {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-6 py-4 text-sm">${escapeHtml(item.nombre)}</td>
-            <td class="px-6 py-4 text-sm">${item.cantidad}</td>
+            <td class="px-6 py-4 text-sm">${formatCantidad(item.cantidad)}</td>
             <td class="px-6 py-4 text-sm">${formatCurrency(item.precio_unitario)}</td>
             <td class="px-6 py-4 text-sm font-semibold">${formatCurrency(item.subtotal)}</td>
             <td class="px-6 py-4 text-right">

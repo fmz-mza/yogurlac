@@ -89,7 +89,7 @@ function renderResumenCompra(pedidos) {
     pedidos.filter(p => p.estado === 'pendiente').forEach(p => {
         (p.pedido_items || []).forEach(it => {
             const nombre = it.productos?.nombre || '(producto eliminado)';
-            totales.set(nombre, (totales.get(nombre) || 0) + it.cantidad);
+            totales.set(nombre, redondearCantidad((totales.get(nombre) || 0) + Number(it.cantidad)));
         });
     });
 
@@ -102,7 +102,7 @@ function renderResumenCompra(pedidos) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td class="px-4 py-2 text-sm text-gray-900">${escapeHtml(nombre)}</td>
-            <td class="px-4 py-2 text-sm text-right font-semibold text-gray-900">${cant}</td>
+            <td class="px-4 py-2 text-sm text-right font-semibold text-gray-900">${formatCantidad(cant)}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -125,7 +125,7 @@ function renderPedidos(pedidos) {
 
     pedidos.forEach(p => {
         const items = (p.pedido_items || [])
-            .map(it => `<li>${it.cantidad} × ${escapeHtml(it.productos?.nombre || '(producto eliminado)')}</li>`)
+            .map(it => `<li>${formatCantidad(it.cantidad)} ×${escapeHtml(it.productos?.nombre || '(producto eliminado)')}</li>`)
             .join('');
         const acciones = p.estado === 'pendiente' ? `
             <div class="flex gap-3 mt-3">
@@ -167,7 +167,7 @@ function initModalPedido() {
         const items = [...document.querySelectorAll('#ped-lineas [data-linea]')]
             .map(l => ({
                 producto_id: l.querySelector('select').value,
-                cantidad: parseInt(l.querySelector('input').value, 10)
+                cantidad: parseFloat(l.querySelector('input').value)
             }))
             .filter(i => i.producto_id && i.cantidad > 0);
 
@@ -251,8 +251,8 @@ function agregarLinea(productoId = '', cantidad = '') {
 
     const input = document.createElement('input');
     input.type = 'number';
-    input.min = '1';
-    input.step = '1';
+    input.min = '0.001';
+    input.step = '0.001'; // admite decimales (productos por kilo)
     input.placeholder = 'Cant.';
     input.className = 'w-24 border border-gray-300 rounded-md px-3 py-2';
     input.value = cantidad;
