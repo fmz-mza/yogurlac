@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compras - YogurLac</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <link rel="stylesheet" href="css/styles.css"> <style id="auth-oculto">body{visibility:hidden}</style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navbar -->
+    <nav class="bg-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-xl font-bold text-blue-600">🥛 YogurLac</h1>
+                </div>
+                <div class="hidden md:flex space-x-8">
+                    <a href="index.html" class="text-gray-700 hover:text-blue-600">Dashboard</a>
+                    <a href="pedidos.html" class="text-gray-700 hover:text-blue-600">Pedidos</a>
+                    <a href="compras.html" class="text-blue-600 font-semibold border-b-2 border-blue-600">Compras</a>
+                    <a href="ventas.html"  class="text-gray-700 hover:text-blue-600">Nueva Venta</a>
+                    <a href="clientes.html" class="text-gray-700 hover:text-blue-600">Clientes</a>
+                    <a href="precios.html" class="text-gray-700 hover:text-blue-600">Precios</a>
+                    <a href="proveedores.html" class="text-gray-700 hover:text-blue-600">Proveedores</a>
+                </div>
+                <button id="mobile-menu-btn" class="md:hidden flex items-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-t">
+            <a href="index.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Dashboard</a>
+            <a href="pedidos.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Pedidos</a>
+            <a href="compras.html" class="block px-4 py-2 text-blue-600 font-semibold bg-blue-50">Compras</a>
+            <a href="ventas.html" class="block px-4 py-2 text-green-600 font-semibold bg-green-50 hover:bg-green-100">🛒 Nueva Venta</a>
+            <a href="clientes.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Clientes</a>
+            <a href="precios.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Precios</a>
+            <a href="proveedores.html" class="block px-4 py-2 text-gray-700 hover:bg-gray-50">Proveedores</a>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Compras a Yogurlac</h2>
+            <p class="text-gray-600 mt-1">Cargá lo que realmente te dieron en el remito: sube tu saldo con Yogurlac y fija el costo del día</p>
+        </div>
+
+        <!-- Fecha y proveedor -->
+        <div class="bg-white rounded-lg shadow p-4 mb-6 flex flex-wrap items-center gap-2">
+            <button id="btn-dia-anterior" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día anterior">←</button>
+            <input type="date" id="fecha-compra" class="border border-gray-300 rounded-md px-3 py-2">
+            <button id="btn-dia-siguiente" class="px-3 py-2 bg-gray-100 rounded-md hover:bg-gray-200" aria-label="Día siguiente">→</button>
+            <button id="btn-hoy" class="px-3 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100">Hoy</button>
+            <span id="fecha-legible" class="text-sm text-gray-500 mx-2"></span>
+            <label for="compra-proveedor" class="text-sm font-medium text-gray-700 sm:ml-auto">Proveedor</label>
+            <select id="compra-proveedor" class="border border-gray-300 rounded-md px-3 py-2 bg-white"></select>
+        </div>
+
+        <div id="aviso-sin-proveedor" class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-6 text-sm">
+            Todavía no cargaste ningún proveedor. Creá a Yogurlac en <a href="proveedores.html" class="underline font-semibold">Proveedores</a> y volvé.
+        </div>
+
+        <div id="aviso-compra-existente" class="hidden bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-4 mb-6 text-sm flex flex-wrap items-center gap-3">
+            <span id="aviso-compra-texto"></span>
+            <button id="btn-precargar" class="px-3 py-1 bg-white border border-blue-300 rounded-md hover:bg-blue-100">Precargar desde los pedidos</button>
+        </div>
+
+        <!-- Remito -->
+        <div class="bg-white rounded-lg shadow overflow-hidden mb-8">
+            <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap justify-between items-center gap-2">
+                <div>
+                    <h3 class="text-base font-semibold text-gray-900">Remito</h3>
+                    <p class="text-xs text-gray-500">Viene precargado con la suma de los pedidos pendientes del día. Corregí lo que difiera.</p>
+                </div>
+                <button type="button" id="btn-agregar-linea" class="text-sm text-blue-600 hover:text-blue-800">+ Agregar producto</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pedido</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Recibido</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Costo unit.</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                            <th class="px-2 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="remito-body" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
+            </div>
+            <div class="px-4 py-4 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" id="chk-actualizar-costos" checked>
+                    Actualizar el costo de los productos cuyo precio cambió
+                </label>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">Total del remito</p>
+                        <p id="remito-total" class="text-xl font-bold text-gray-900">$ 0,00</p>
+                    </div>
+                    <button id="btn-registrar-compra" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
+                        Registrar compra
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compras del día -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-4 py-3 border-b border-gray-200">
+                <h3 class="text-base font-semibold text-gray-900">Compras registradas este día</h3>
+            </div>
+            <div id="lista-compras" class="divide-y divide-gray-200"></div>
+        </div>
+    </main>
+
+    <script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/utils.js"></script>
+    <script src="js/compras.js"></script>
+</body>
+</html>

@@ -217,13 +217,13 @@ window.abrirHistorialProv = async function(id) {
         return;
     }
 
-    const etiquetas = { compra: '📦 Compra a cuenta', pago: '💰 Pago' };
+    const etiquetas = { compra: '📦 Compra', pago: '💰 Pago', credito: '↩️ Crédito' };
 
     // Saldo acumulado en orden cronológico; se muestra del más nuevo al más viejo
     let saldo = 0;
     const filas = movimientos.map(m => {
         const monto = Number(m.monto);
-        const firmado = m.tipo === 'pago' ? -monto : monto;
+        const firmado = (m.tipo === 'pago' || m.tipo === 'credito') ? -monto : monto; // pago y crédito restan
         saldo += firmado;
         return { m, firmado, saldo };
     }).reverse();
