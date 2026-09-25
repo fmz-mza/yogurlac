@@ -95,6 +95,57 @@
                 </form>
             </div>
         </div>
+        <!-- MODAL ENTREGA Y COBRO -->
+        <div id="modal-entrega" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div class="relative p-5 border w-full max-w-3xl shadow-lg rounded-md bg-white mx-4 max-h-[90vh] overflow-y-auto">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Entregar pedido</h3>
+                <p id="ent-cliente" class="text-sm text-gray-500 font-semibold mb-4"></p>
+
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Pedido</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Entregado</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Precio unit.</th>
+                                <th class="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ent-lineas" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Poné 0 en "Entregado" si no llevaste ese producto. Podés cambiar la cantidad y el precio de cada línea.</p>
+
+                <div class="mt-4 flex justify-between items-center border-t pt-4">
+                    <span class="text-sm font-medium text-gray-700">Total de la entrega</span>
+                    <span id="ent-total" class="text-xl font-bold text-gray-900">$ 0,00</span>
+                </div>
+
+                <fieldset class="mt-4">
+                    <legend class="block text-sm font-medium text-gray-700 mb-2">¿Cómo pagó?</legend>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 text-sm text-gray-800">
+                            <input type="radio" name="ent-pago" value="todo" checked> Pagó todo
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-800">
+                            <input type="radio" name="ent-pago" value="cuenta"> A cuenta (no pagó nada)
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-800">
+                            <input type="radio" name="ent-pago" value="parcial"> Pago parcial
+                            <input type="number" id="ent-monto-parcial" min="0" step="0.01" placeholder="Monto que pagó" disabled
+                                   class="ml-2 border border-gray-300 rounded-md px-2 py-1 w-40">
+                        </label>
+                    </div>
+                    <p id="ent-resumen-cobro" class="text-sm text-gray-600 mt-3"></p>
+                </fieldset>
+
+                <div class="flex justify-end gap-2 pt-4">
+                    <button type="button" id="btn-cancelar-entrega" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancelar</button>
+                    <button type="button" id="btn-confirmar-entrega" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Confirmar entrega</button>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script src="js/supabase.js"></script><script src="js/auth.js"></script><script src="js/utils.js"></script>

@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-dia-siguiente').addEventListener('click', () => { inputFecha.value = sumarDias(inputFecha.value, 1); cargarPedidos(); });
 
     initModalPedido();
+    initModalEntrega();
     await cargarCatalogos();
     await cargarPedidos();
 });
@@ -43,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function cargarCatalogos() {
     const [{ data: clientes, error: e1 }, { data: productos, error: e2 }] = await Promise.all([
         window.supabaseClient.from('clientes').select('id, nombre').order('nombre'),
-        window.supabaseClient.from('productos').select('id, nombre').eq('activo', true).order('nombre')
+        window.supabaseClient.from('productos').select('id, nombre, precio_venta, precio_minorista, precio_mayorista, precio_distribuidor').eq('activo', true).order('nombre')
     ]);
     if (e1 || e2) console.error('Error cargando catálogos:', e1 || e2);
     clientesLista = clientes || [];
@@ -65,7 +66,7 @@ async function cargarPedidos() {
 
     const { data, error } = await window.supabaseClient
         .from('pedidos')
-        .select('id, cliente_id, fecha_entrega, estado, observaciones, created_at, clientes(nombre), pedido_items(producto_id, cantidad, productos(nombre))')
+        .select('id, cliente_id, fecha_entrega, estado, observaciones, venta_id, created_at, clientes(nombre, lista_precio), ventas(total), pedido_items(producto_id, cantidad, productos(nombre))')
         .eq('fecha_entrega', fecha)
         .order('created_at', { ascending: true });
 
@@ -128,10 +129,13 @@ function renderPedidos(pedidos) {
             .map(it => `<li>${formatCantidad(it.cantidad)} ×${escapeHtml(it.productos?.nombre || '(producto eliminado)')}</li>`)
             .join('');
         const acciones = p.estado === 'pendiente' ? `
-            <div class="flex gap-3 mt-3">
-                <button onclick="editarPedido('${p.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium">✏️ Editar</button>
-                <button onclick="cancelarPedido('${p.id}')" class="text-red-600 hover:text-red-800 text-sm font-medium">✖ Cancelar pedido</button>
-            </div>` : '';
+            <div class="flex flex-wrap gap-3 mt-3">
+                <button onclick="entregarPedido('${p.id}')" class="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium">🚚 Entregar</button>
+                <button onclick="editarPedido('${p.id}')" class="text-blue-600 hover:text-blue-800 text-sm font-medium self-center">✏️ Editar</button>
+                <button onclick="cancelarPedido('${p.id}')" class="text-red-600 hover:text-red-800 text-sm font-medium self-center">✖ Cancelar pedido</button>
+            </div>`
+            : (p.estado === 'entregado' && p.ventas
+                ? `<p class="mt-3 text-sm font-semibold text-green-700">Entregado por ${formatCurrency(p.ventas.total)}</p>` : '');
 
         const card = document.createElement('div');
         card.className = 'bg-white rounded-lg shadow p-4' + (p.estado === 'cancelado' ? ' opacity-60' : '');
@@ -289,3 +293,191 @@ window.cancelarPedido = async function(id) {
     }
     await cargarPedidos();
 };
+
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(amount || 0);
+}
+
+// --- ENTREGA Y COBRO ---
+// Al entregar se crea la venta con lo REALMENTE entregado (cantidad y precio editables por línea) y se registra
+// el cobro: pagó todo / a cuenta / parcial. El saldo del cliente sube solo por lo que no pagó.
+let entrega = null; // { pedidoId, lineas: [{producto_id, nombre, pedido, cantidad, precio}] }
+
+// Mismo criterio que el servidor: precio de la lista del cliente; si falta, el precio base
+function precioParaLista(producto, lista) {
+    if (!producto) return 0;
+    let precio = lista === 'mayorista' ? producto.precio_mayorista
+               : lista === 'distribuidor' ? producto.precio_distribuidor
+               : producto.precio_minorista;
+    if (precio == null) precio = producto.precio_venta;
+    precio = Number(precio) || 0;
+    return precio > 0 ? precio : 0;
+}
+
+const subtotalLinea = (l) => Math.round(l.cantidad * l.precio * 100) / 100;
+const totalEntrega = () => entrega.lineas.reduce((s, l) => s + subtotalLinea(l), 0);
+
+function initModalEntrega() {
+    const modal = document.getElementById('modal-entrega');
+    document.getElementById('btn-cancelar-entrega').addEventListener('click', () => modal.classList.add('hidden'));
+    document.getElementById('btn-confirmar-entrega').addEventListener('click', confirmarEntrega);
+
+    document.querySelectorAll('input[name="ent-pago"]').forEach(r => r.addEventListener('change', () => {
+        const parcial = document.querySelector('input[name="ent-pago"]:checked').value === 'parcial';
+        const monto = document.getElementById('ent-monto-parcial');
+        monto.disabled = !parcial;
+        if (!parcial) monto.value = '';
+        actualizarCobro();
+    }));
+    document.getElementById('ent-monto-parcial').addEventListener('input', actualizarCobro);
+}
+
+window.entregarPedido = function(id) {
+    const p = pedidosPorId.get(id);
+    if (!p) return;
+    const lista = p.clientes?.lista_precio || 'minorista';
+
+    entrega = {
+        pedidoId: id,
+        lineas: (p.pedido_items || []).map(it => {
+            const prod = productosLista.find(x => x.id === it.producto_id);
+            return {
+                producto_id: it.producto_id,
+                nombre: it.productos?.nombre || '(producto)',
+                pedido: Number(it.cantidad),
+                cantidad: Number(it.cantidad),
+                precio: precioParaLista(prod, lista)
+            };
+        })
+    };
+
+    document.getElementById('ent-cliente').textContent = `Cliente: ${p.clientes?.nombre || ''} · lista ${lista}`;
+    document.querySelector('input[name="ent-pago"][value="todo"]').checked = true;
+    const monto = document.getElementById('ent-monto-parcial');
+    monto.value = '';
+    monto.disabled = true;
+
+    renderLineasEntrega();
+    document.getElementById('modal-entrega').classList.remove('hidden');
+};
+
+function renderLineasEntrega() {
+    const tbody = document.getElementById('ent-lineas');
+    tbody.innerHTML = '';
+
+    entrega.lineas.forEach(l => {
+        const tr = document.createElement('tr');
+
+        const tdNombre = document.createElement('td');
+        tdNombre.className = 'px-3 py-2 text-sm text-gray-900';
+        tdNombre.textContent = l.nombre;
+
+        const tdPedido = document.createElement('td');
+        tdPedido.className = 'px-3 py-2 text-sm text-right text-gray-600';
+        tdPedido.textContent = formatCantidad(l.pedido);
+
+        const tdCant = document.createElement('td');
+        tdCant.className = 'px-3 py-2';
+        const inCant = document.createElement('input');
+        inCant.type = 'number'; inCant.min = '0'; inCant.step = '0.001';
+        inCant.className = 'w-24 border border-gray-300 rounded-md px-2 py-1';
+        inCant.value = l.cantidad;
+        tdCant.appendChild(inCant);
+
+        const tdPrecio = document.createElement('td');
+        tdPrecio.className = 'px-3 py-2';
+        const inPrecio = document.createElement('input');
+        inPrecio.type = 'number'; inPrecio.min = '0'; inPrecio.step = '0.01';
+        inPrecio.className = 'w-28 border border-gray-300 rounded-md px-2 py-1';
+        inPrecio.placeholder = 'Falta precio';
+        inPrecio.value = l.precio > 0 ? l.precio : '';
+        tdPrecio.appendChild(inPrecio);
+
+        const tdSub = document.createElement('td');
+        tdSub.className = 'px-3 py-2 text-sm text-right font-semibold text-gray-900';
+
+        const refrescar = () => {
+            l.cantidad = redondearCantidad(parseFloat(inCant.value) || 0);
+            l.precio = parseFloat(inPrecio.value) || 0;
+            tdSub.textContent = formatCurrency(subtotalLinea(l));
+            // Avisar visualmente el precio faltante de una línea que se entrega
+            inPrecio.classList.toggle('border-red-500', l.cantidad > 0 && !(l.precio > 0));
+            document.getElementById('ent-total').textContent = formatCurrency(totalEntrega());
+            actualizarCobro();
+        };
+        inCant.addEventListener('input', refrescar);
+        inPrecio.addEventListener('input', refrescar);
+
+        tr.append(tdNombre, tdPedido, tdCant, tdPrecio, tdSub);
+        tbody.appendChild(tr);
+        refrescar();
+    });
+}
+
+function montoPagadoElegido() {
+    const total = totalEntrega();
+    const modo = document.querySelector('input[name="ent-pago"]:checked').value;
+    if (modo === 'todo') return total;
+    if (modo === 'cuenta') return 0;
+    return parseFloat(document.getElementById('ent-monto-parcial').value) || 0;
+}
+
+function actualizarCobro() {
+    if (!entrega) return;
+    const total = totalEntrega();
+    const pagado = montoPagadoElegido();
+    const debe = Math.max(total - pagado, 0);
+    const el = document.getElementById('ent-resumen-cobro');
+    if (pagado > total + 0.005) {
+        el.textContent = 'El pago no puede superar el total de la entrega.';
+        el.className = 'text-sm text-red-600 mt-3';
+    } else {
+        el.textContent = debe > 0.005
+            ? `Cobrás ${formatCurrency(pagado)} y el cliente queda debiendo ${formatCurrency(debe)}.`
+            : `Cobrás ${formatCurrency(pagado)}. El cliente no queda debiendo nada.`;
+        el.className = 'text-sm text-gray-600 mt-3';
+    }
+}
+
+async function confirmarEntrega() {
+    if (!entrega) return;
+
+    const aEntregar = entrega.lineas.filter(l => l.cantidad > 0);
+    if (aEntregar.length === 0) { alert('No hay ningún producto con cantidad para entregar.'); return; }
+    const sinPrecio = aEntregar.find(l => !(l.precio > 0));
+    if (sinPrecio) { alert(`Falta el precio de "${sinPrecio.nombre}". Cargalo acá o en Precios.`); return; }
+
+    const total = totalEntrega();
+    const modo = document.querySelector('input[name="ent-pago"]:checked').value;
+    const pagado = montoPagadoElegido();
+    if (modo === 'parcial' && !(pagado > 0)) { alert('Ingresá el monto que pagó.'); return; }
+    if (pagado > total + 0.005) { alert('El pago no puede superar el total de la entrega.'); return; }
+
+    const debe = Math.max(total - pagado, 0);
+    if (!confirm(`Confirmar entrega por ${formatCurrency(total)}.\nCobrás ${formatCurrency(pagado)}` +
+                 (debe > 0.005 ? ` y queda debiendo ${formatCurrency(debe)}.` : '.'))) return;
+
+    const btn = document.getElementById('btn-confirmar-entrega');
+    const textoOriginal = btn.textContent;
+    btn.textContent = 'Registrando...';
+    btn.disabled = true;
+    try {
+        const { error } = await window.supabaseClient.rpc('entregar_pedido', {
+            p_pedido_id: entrega.pedidoId,
+            p_items: aEntregar.map(l => ({ producto_id: l.producto_id, cantidad: l.cantidad, precio_unitario: l.precio })),
+            p_monto_pagado: Math.round(Math.min(pagado, total) * 100) / 100
+        });
+        if (error) throw error;
+
+        document.getElementById('modal-entrega').classList.add('hidden');
+        entrega = null;
+        alert('✅ Entrega registrada');
+        await cargarPedidos();
+    } catch (err) {
+        console.error(err);
+        alert('❌ Error: ' + err.message);
+    } finally {
+        btn.textContent = textoOriginal;
+        btn.disabled = false;
+    }
+}
