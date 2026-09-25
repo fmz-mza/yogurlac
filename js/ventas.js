@@ -4,6 +4,13 @@ let clienteActual = null;
 let productosCache = [];
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Menú móvil (la barra la dibuja js/nav.js)
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+    }
+
     await cargarClientes();
     await cargarProductosBase();
     initEventListeners();
