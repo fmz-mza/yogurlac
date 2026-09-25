@@ -100,6 +100,7 @@ function agregarAlCarrito() {
     if (!(cantidad > 0)) return alert('Ingresá una cantidad válida');
     const precio = parseFloat(prodSelect.options[prodSelect.selectedIndex].dataset.precio);
     const nombre = prodSelect.options[prodSelect.selectedIndex].dataset.nombre;
+    if (!(precio > 0)) return alert(`"${nombre}" no tiene precio de venta para la lista de este cliente. Cargalo en Precios.`);
 
     // Verificar si ya existe en carrito para sumar cantidad
     const existente = carrito.find(item => item.producto_id === productId);
